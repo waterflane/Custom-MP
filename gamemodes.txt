@@ -2,8 +2,26 @@
 name = Custom Deathmatch MP
 en_name = Custom Deathmatch MP
 ru_name = Custom Deathmatch MP
-description = Configurable multiplayer deathmatch with headshot damage, match time, starting items, and weighted loot spawns.
-en_description = Configurable multiplayer deathmatch with headshot damage, match time, starting items, and weighted loot spawns.
-ru_description = Configurable multiplayer deathmatch with headshot damage, match time, starting items, and weighted loot spawns.
+description = Vanilla Deathmatch with configurable loadouts, weighted loot and five shared presets.
+en_description = Vanilla Deathmatch with configurable loadouts, weighted loot and five shared presets.
+ru_description = Ванильный Deathmatch с настраиваемыми инструментами, лутом и пятью общими пресетами.
 path = cdmp.lua
 preview = td_icon.jpg
+
+[customteamdeathmatchmp]
+name = Custom Team Deathmatch MP
+en_name = Custom Team Deathmatch MP
+ru_name = Custom Team Deathmatch MP
+en_description = Vanilla Team Deathmatch with configurable loadouts, weighted loot and five shared presets.
+ru_description = Ванильный командный Deathmatch с настраиваемыми инструментами, лутом и пятью общими пресетами.
+path = teamdeathmatch.lua
+preview = teamdeathmatch_thumb.jpg
+
+[customcapturetheflagmp]
+name = Custom Capture the Flag MP
+en_name = Custom Capture the Flag MP
+ru_name = Custom Capture the Flag MP
+en_description = Vanilla Capture the Flag with configurable loadouts, weighted loot and five shared presets.
+ru_description = Ванильный захват флага с настраиваемыми инструментами, лутом и пятью общими пресетами.
+path = capturetheflag.lua
+preview = capturetheflag_thumb.jpg

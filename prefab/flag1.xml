@@ -1,0 +1,7 @@
+<prefab version="1.5.2">
+	<group name="instance=MOD/prefab/flag1.xml" pos="-2.5 1.0 -5.3" rot="0.0 0.0 0.0">
+		<body tags="flag=1" pos="0.0 0.0 0.0" dynamic="true">
+			<vox tags="nocull noquery unbreakable" pos="0 0 0" file="MOD/vox/ctf.vox" object="flag-pink-1"/>
+		</body>
+	</group>
+</prefab>

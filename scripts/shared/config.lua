@@ -1,22 +1,14 @@
 CDMP = CDMP or {}
 
-CDMP.VERSION = 3
-CDMP.DEFAULT_WALK_SPEED = 7.0
-CDMP.RESPAWN_DELAY = 4.0
-CDMP.COUNTDOWN_TIME = 5.0
+CDMP.VERSION = 4
 CDMP.HITMARKER_TIME = 0.35
 CDMP.KILLMARKER_TIME = 0.65
 CDMP.DAMAGE_NUMBER_TIME = 0.85
 CDMP.SUPPRESSED_DAMAGE_TIME = 0.35
-CDMP.LOADOUT_VERIFY_TIME = 1.0
-CDMP.RESULTS_SCOREBOARD_DELAY = 2.0
-CDMP.RESULTS_SCOREBOARD_FADE = 0.35
-CDMP.KILLFEED_MAX = 6
-CDMP.LOOT_RESPAWN_DELAY = 18.0
 CDMP.HEAD_RADIUS = 0.45
 CDMP.HEAD_OFFSET = Vec(0, 0.18, 0)
 
-CDMP.DURATION_OPTIONS = {300, 600, 900, 1200, 1800}
+CDMP.DURATION_OPTIONS = {180, 300, 480, 600, 900, 1200, 1800}
 CDMP.HEADSHOT_OPTIONS = {1.0, 1.15, 1.25, 1.3, 1.5, 2.0, 2.5, 3.0}
 
 CDMP.DEFAULT_UNLISTED_TOOL_AMMO = 10
@@ -52,9 +44,98 @@ CDMP.VANILLA_TOOLS = {
 
 function CDMP.Clamp(value, minValue, maxValue)
 	value = tonumber(value) or minValue
+	if value ~= value or value == math.huge or value == -math.huge then value = minValue end
 	if value < minValue then return minValue end
 	if value > maxValue then return maxValue end
 	return value
+end
+
+function CDMP.Copy(value)
+	if type(value) ~= "table" then return value end
+	local copy = {}
+	for k, v in pairs(value) do copy[k] = CDMP.Copy(v) end
+	return copy
+end
+
+function CDMP.IsFlagTool(id)
+	return id == "flag1" or id == "flag2"
+end
+
+function CDMP.DefaultSettings(mode, tools)
+	local settings = {
+		duration = mode == "ctf" and 480 or 300,
+		headshot = 1.0,
+		hud = {nameplates = true, hitMarker = false, killMarker = false, damageNumbers = false},
+		tools = {},
+	}
+	for _, tool in ipairs(tools) do
+		local starts = tool.id == "gun" or tool.id == "sledge" or tool.id == "spraycan" or tool.id == "extinguisher"
+		settings.tools[tool.id] = {
+			startEnabled = starts, ammo = tool.id == "gun" and 7 or (starts and 0 or tool.ammo),
+			canLoot = tool.canLoot, lootWeight = tool.lootWeight, pickupAmount = tool.pickupAmount,
+		}
+	end
+	return settings
+end
+
+local function allowedNumber(value, options, fallback)
+	if type(value) ~= "number" then return fallback end
+	for _, option in ipairs(options) do
+		-- Registry/network floats can round values such as 1.15.
+		if math.abs(value - option) <= 0.00001 then return option end
+	end
+	return fallback
+end
+
+function CDMP.ValidateSettings(raw, mode, tools)
+	local settings = CDMP.DefaultSettings(mode, tools)
+	if type(raw) ~= "table" then return settings end
+	settings.duration = allowedNumber(raw.duration, CDMP.DURATION_OPTIONS, settings.duration)
+	settings.headshot = allowedNumber(raw.headshot, CDMP.HEADSHOT_OPTIONS, settings.headshot)
+	if type(raw.hud) == "table" then
+		for name, default in pairs(settings.hud) do
+			if type(raw.hud[name]) == "boolean" then settings.hud[name] = raw.hud[name] end
+		end
+	end
+	if type(raw.tools) == "table" then
+		for id, item in pairs(settings.tools) do
+			local incoming = raw.tools[id]
+			if type(incoming) == "table" then
+				for _, field in ipairs({"startEnabled", "canLoot"}) do
+					if type(incoming[field]) == "boolean" then item[field] = incoming[field] end
+				end
+				for _, field in ipairs({"ammo", "lootWeight", "pickupAmount"}) do
+					if type(incoming[field]) == "number" then
+						item[field] = math.floor(CDMP.Clamp(incoming[field], 0, field == "lootWeight" and 10 or 100))
+					end
+				end
+			end
+		end
+	end
+	return settings
+end
+
+function CDMP.BuildLoadout(settings, tools)
+	local loadout = {}
+	-- Keep the vanilla gun-first selection order unless the gun is disabled.
+	local function add(tool)
+		local item = settings.tools[tool.id]
+		if item and item.startEnabled then loadout[#loadout + 1] = {tool.id, item.ammo} end
+	end
+	for _, tool in ipairs(tools) do if tool.id == "gun" then add(tool) end end
+	for _, tool in ipairs(tools) do if tool.id ~= "gun" then add(tool) end end
+	return loadout
+end
+
+function CDMP.BuildLoot(settings, tools)
+	local loot = {}
+	for _, tool in ipairs(tools) do
+		local item = settings.tools[tool.id]
+		if item and item.canLoot and item.lootWeight > 0 then
+			loot[#loot + 1] = {name = tool.id, weight = item.lootWeight, amount = item.pickupAmount}
+		end
+	end
+	return loot
 end
 
 function CDMP.FormatTime(seconds)
@@ -65,12 +146,7 @@ function CDMP.FormatTime(seconds)
 	return tostring(minutes) .. ":" .. tostring(secs)
 end
 
-function CDMP.CopyTransform(t)
-	return Transform(Vec(t.pos[1], t.pos[2], t.pos[3]), Quat(t.rot[1], t.rot[2], t.rot[3], t.rot[4]))
-end
-
 function CDMP.GetHeadshotCenter(playerId)
 	local eye = GetPlayerEyeTransform(playerId)
 	return TransformToParentPoint(eye, CDMP.HEAD_OFFSET)
 end
-

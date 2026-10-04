@@ -468,6 +468,83 @@ function _dampVal(rate, dt)
     return 1.0 - 2.0^(-rate * dt)
 end
 
+function _safeNormalize(vec, fallback)
+	local len = VecLength(vec)
+	if len > 0.00001 then
+		return VecScale(vec, 1.0 / len)
+	end
+	return VecCopy(fallback)
+end
+
+function _quatFromBasis(right, up, back)
+	local m00 = right[1]
+	local m01 = up[1]
+	local m02 = back[1]
+	local m10 = right[2]
+	local m11 = up[2]
+	local m12 = back[2]
+	local m20 = right[3]
+	local m21 = up[3]
+	local m22 = back[3]
+
+	local trace = m00 + m11 + m22
+	if trace > 0.0 then
+		local s = math.sqrt(trace + 1.0) * 2.0
+		return Quat((m21 - m12) / s, (m02 - m20) / s, (m10 - m01) / s, 0.25 * s)
+	elseif m00 > m11 and m00 > m22 then
+		local s = math.sqrt(1.0 + m00 - m11 - m22) * 2.0
+		return Quat(0.25 * s, (m01 + m10) / s, (m02 + m20) / s, (m21 - m12) / s)
+	elseif m11 > m22 then
+		local s = math.sqrt(1.0 + m11 - m00 - m22) * 2.0
+		return Quat((m01 + m10) / s, 0.25 * s, (m12 + m21) / s, (m02 - m20) / s)
+	else
+		local s = math.sqrt(1.0 + m22 - m00 - m11) * 2.0
+		return Quat((m02 + m20) / s, (m12 + m21) / s, 0.25 * s, (m10 - m01) / s)
+	end
+end
+
+function QuatLookAtUp(eye, target, up)
+	if up == nil then
+		return QuatLookAt(eye, target)
+	end
+
+	local forward = VecSub(target, eye)
+	local forwardLen = VecLength(forward)
+	if forwardLen < 0.00001 then
+		return Quat()
+	end
+
+	forward = VecScale(forward, 1.0 / forwardLen)
+	up = _safeNormalize(up, Vec(0, 1, 0))
+
+	local right = VecCross(forward, up)
+	if VecLength(right) < 0.00001 then
+		local fallbackUp = Vec(0, 1, 0)
+		if math.abs(VecDot(forward, fallbackUp)) > 0.999 then
+			fallbackUp = Vec(1, 0, 0)
+		end
+		right = VecCross(forward, fallbackUp)
+	end
+
+	right = _safeNormalize(right, Vec(1, 0, 0))
+	up = _safeNormalize(VecCross(right, forward), up)
+	return _quatFromBasis(right, up, VecScale(forward, -1.0))
+end
+
+function _getPlayerSpectateRotation(playerTransform, orientation)
+	local up = _safeNormalize(QuatRotateVec(orientation, Vec(0,1,0)), Vec(0,1,0))
+	local forward = QuatRotateVec(playerTransform.rot, Vec(0,0,-1))
+	forward = VecSub(forward, VecScale(up, VecDot(forward, up)))
+
+	if VecLength(forward) < 0.00001 then
+		forward = QuatRotateVec(orientation, Vec(0,0,-1))
+		forward = VecSub(forward, VecScale(up, VecDot(forward, up)))
+	end
+
+	forward = _safeNormalize(forward, QuatRotateVec(orientation, Vec(0,0,-1)))
+	return QuatLookAtUp(Vec(), forward, up)
+end
+
 function _checkOcclusion(eye, lookAt, step, onPreQuery, dbg)
 	local up = Vec(0,1,0)
 	local fwd = VecNormalize(VecSub(lookAt, eye))
@@ -648,6 +725,7 @@ function _calculateCameraTransform(player, dt)
 
 	local lookAt = Vec()
 	local eyeDir = Vec()
+	local upDir = nil
 
 	local distanceMin = 1.0
 	local distanceMax = 6.0
@@ -681,6 +759,7 @@ function _calculateCameraTransform(player, dt)
 		end
 	else
 		local transform = GetPlayerTransform(player)
+		transform.rot = _getPlayerSpectateRotation(transform, GetPlayerOrientation(player))
 
 		if GetPlayerHealth(player) <= 0 then
 			local playerAnimator = GetPlayerAnimator(player)
@@ -688,9 +767,9 @@ function _calculateCameraTransform(player, dt)
 		end
 
 		transform = _updateFollowTransform(transform, dt)
+		upDir = QuatRotateVec(transform.rot, Vec(0,1,0))
 
-		lookAt = VecCopy(transform.pos)
-		lookAt[2] = lookAt[2] + 1.5 - GetPlayerCrouch(player) * 0.5
+		lookAt = VecAdd(transform.pos, VecScale(upDir, 1.5 - GetPlayerCrouch(player) * 0.5))
 
 		local worldRot = QuatRotateQuat(transform.rot, localRot)
 		eyeDir = QuatRotateVec(worldRot, Vec(0,0,1))
@@ -732,7 +811,7 @@ function _calculateCameraTransform(player, dt)
 
 	eye = VecAdd(lookAt, VecScale(eyeDir, _spectateState.actualDistance))
 
-	local t = Transform(eye, QuatLookAt(eye, lookAt))
+	local t = Transform(eye, QuatLookAtUp(eye, lookAt, upDir))
 	_spectateState.transform = t
 	_spectateState.eye = eye
 	_spectateState.lookAt = lookAt

@@ -71,6 +71,11 @@ end
 function hudInit(useDamageIndicators)
 	shared._hud.useDamageIndicators = useDamageIndicators
 	shared._hud.gameIsSetup = false
+	shared._camTarget = Vec(0,0,0)
+	local loc = FindLocation("overviewcam", true)
+    if loc ~= 0 then
+        shared._camTarget = GetLocationTransform(loc).pos
+    end
 end
 
 --- Enable the "Unstuck" pause menu button (server).
@@ -79,19 +84,6 @@ end
 -- This button has a cooldown of 10 seconds per client.
 function hudAddUnstuckButton()
 	shared._hud.enableUnstuck = true
-end
-
-function hudIsSuppressedDamageEvent(victim, attacker, damage)
-	local cdmp = shared.cdmp or {}
-	local events = cdmp.suppressedDamageEvents or {}
-	for i = 1, #events do
-		local event = events[i]
-		local expectedDamage = event.damage or 0
-		if event.victim == victim and event.attacker == attacker and (math.abs(expectedDamage - (damage or 0)) <= 0.01 or ((damage or 0) > 0 and (damage or 0) <= expectedDamage + 0.01)) then
-			return true
-		end
-	end
-	return false
 end
 
 --- Process HUD-related events and health bar updates (client).
@@ -105,8 +97,7 @@ function hudTick(dt)
 	local c = GetEventCount("playerhurt")
 	for i=1,c do
 		local victim, before, after, attacker, _point, _impulse = GetEvent("playerhurt", i)
-		local damage = (before or 0) - (after or 0)
-		if attacker ~= 0 and math.ceil(damage*100) > 0 and not hudIsSuppressedDamageEvent(victim, attacker, damage) then
+		if attacker ~= 0 and math.ceil((before-after)*100) > 0 and not CDMP.SuppressHudDamage(victim, attacker, before, after) then
 			if shared._hud.useDamageIndicators and victim == GetLocalPlayer() then
 				client._receiveDamage(attacker)
 			end
@@ -403,9 +394,11 @@ function hudDrawResults(bannerLabel, bannerColor, title, columns, groups, contin
 	
 	_scoreresults_anim.param = math.clamp(_scoreresults_anim.param + dt, 0.0, 1.0)
 
-	-- Assumes winner in the first group and will de-emphasize other groups
 	for i = 1, #groups do
-		groups[i].dim = i > 1
+		if groups[i].dim == nil then
+			-- Assumes winner in the first group and will de-emphasize other groups
+			groups[i].dim = i > 1
+		end
 	end
 	-- apply animation
 	UiTranslate(0, UiMiddle())
@@ -935,11 +928,12 @@ function hudDrawPlayerWorldMarkers(players, lineOfSightRequired, maxRange, color
 	for i=1,#players do
 		local p = players[i]
 		if not IsPlayerLocal(p) and GetPlayerHealth(p) > 0 and not IsPlayerDisabled(p) and IsPlayerValid(p) then
+			local playerUp = GetPlayerUp(p)
 			markers[1 + #markers] = { 
-				pos=VecAdd(GetPlayerTransform(p).pos, Vec(0, 1.0, 0)), 
-				offset = Vec(0, 1.2, 0),
+				pos=VecAdd(GetPlayerTransform(p).pos, playerUp),
+				offset = VecScale(playerUp, 1.2),
 				color= color or COLOR_WHITE,
-				label=GetPlayerName(p),
+				label=CDMP.ShowNames() and GetPlayerName(p) or nil,
 				lineOfSightRequired = lineOfSightRequired,
 				maxRange = maxRange or 9999.0,
 				icon = "ui/hud/team-direction.png",
@@ -998,15 +992,14 @@ function hudDrawWorldMarkers(markers)
 	for i=1,#markers do
 		UiPush()
 		local marker = markers[i]
+		local markerOffset = marker.offset and VecCopy(marker.offset) or Vec(0,0,0)
 
 		local vehicle = marker.player and GetPlayerVehicle(marker.player) or 0
-		if vehicle > 0 then
-			if vehicle > 0 then
-				marker.offset[2] = marker.offset[2] - 1.0
-			end
+		if vehicle > 0 and marker.offset then
+			markerOffset = VecSub(markerOffset, GetPlayerUp())
 		end
 
-		local x, y, dist = UiWorldToPixel(VecAdd(marker.pos, marker.offset and marker.offset or Vec(0,0,0)))
+		local x, y, dist = UiWorldToPixel(VecAdd(marker.pos, markerOffset))
 		local padding = 42
 		local inView = false
 		
@@ -1578,7 +1571,8 @@ function hudDrawResultsAnimation(time, text, backgroundColor)
 	end
 	
     local camPos = VecScale(Vec(math.sin(_resultsAnimTime*0.025), 1.0, math.cos(_resultsAnimTime*0.025)), 50.0)
-    local camRot = QuatLookAt(camPos, Vec(0, 0, 0))
+	camPos = VecAdd(camPos, shared._camTarget)
+    local camRot = QuatLookAt(camPos, shared._camTarget)
 
 	local param = smoothstep(0, 1, clamp(time*0.5, 0, 1))
 
@@ -2125,8 +2119,8 @@ function _drawToolTip(title, info)
 	UiText(info)
 end
 
+-- Match setup is completed only by server.settingsApplyAndStart.
 function server.hudPlayPressed()
-	shared._hud.gameIsSetup = true
 end
 
 

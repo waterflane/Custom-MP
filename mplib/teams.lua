@@ -38,12 +38,18 @@ client._teamState = { stateTime = 0.0, prevState = _WAITING }
 -- @param[type=number] teamCount Number of teams to create.
 function teamsInit(teamCount)
     shared._teamState = { teams={}, state = _WAITING}
+    shared._camTarget = Vec(0,0,0)
     for i=1,teamCount do
         shared._teamState.teams[1 + #shared._teamState.teams] = { 
             name=_teamsGetDefaultTeamName(i), 
             color=_teamsGetDefaultColor(i),
             players={}
         }
+    end
+
+    local loc = FindLocation("overviewcam", true)
+    if loc ~= 0 then
+        shared._camTarget = GetLocationTransform(loc).pos
     end
 end
 
@@ -327,8 +333,8 @@ function teamsDraw(dt)
 
     -- rotate camera around origo as a backdrop to team selection
     _teamState.time = _teamState.time + dt
-    local cam = VecScale(Vec(math.sin(_teamState.time*0.025), 1.0, math.cos(_teamState.time*0.025)), 50.0)
-    SetCameraTransform(Transform(cam, QuatLookAt(cam, Vec())))
+    local cam = VecAdd(shared._camTarget, VecScale(Vec(math.sin(_teamState.time*0.025), 1.0, math.cos(_teamState.time*0.025)), 50.0))
+    SetCameraTransform(Transform(cam, QuatLookAt(cam, shared._camTarget)))
 	SetCameraDof(0, 0)
 
     if LastInputDevice() == UI_DEVICE_GAMEPAD then

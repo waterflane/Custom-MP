@@ -289,7 +289,7 @@ function _tickLootTable(dt, lootTable, loot)
                     end
                 end
                 
-                local bundle = _spawnToolCrate(toolId, Transform(loot[s].transform.pos), amount)
+                local bundle = _spawnToolCrate(toolId, TransformCopy(loot[s].transform), amount)
                 if bundle ~= nil then
                     loot[s].body = bundle.body
                     _toolState.toolBundles[1 + #_toolState.toolBundles] = bundle
@@ -370,7 +370,7 @@ function _spawnCustomToolCrate(toolId, transform)
     local crateEntities = Spawn(
     "<prefab version='1.2.0'>" ..
     "<group name='instance=ammo/custom.xml' pos='-8.7 15.4 1.9' rot='0.0 0.0 0.0'>" ..
-    "<body tags='mp-builtin-ammo unbreakable tool="..toolId.." interact=loc@PICK_UP' pos='0.0 0.5 0.0' dynamic='true' desc='"..name.."'>" ..
+    "<body tags='mp-builtin-ammo unbreakable tool="..toolId.." interact=loc@PICK_UP nocull' pos='0.0 0.5 0.0' dynamic='true' desc='"..name.."'>" ..
     "<vox pos='0.0 -0.5 0.0' rot='0.0 0.0 0.0' file='prop/toolcrate_open.vox' object='small_no-prefab_fallback'>" ..
     "<light pos='0.0 2.0 0.0'/>" ..
     "</vox>" ..
@@ -423,7 +423,8 @@ function _spawnCustomToolCrate(toolId, transform)
     end
 
     min, max = GetBodyBounds(crateBody)
-    transform.pos[2] = transform.pos[2] + 0.55
+
+    transform.pos = VecAdd(transform.pos, QuatRotateVec(transform.rot, Vec(0.0, 0.55, 0.0)))
     SetBodyTransform(crateBody, transform)
 
     return entities

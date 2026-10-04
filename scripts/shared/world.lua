@@ -8,8 +8,9 @@ function CDMP.CollectToolCatalog()
 	local list = {}
 	local byId = {}
 	local ids = {}
+	local available = {}
 	local function add(tool)
-		if not byId[tool.id] then
+		if not byId[tool.id] and available[tool.id] and not CDMP.IsFlagTool(tool.id) then
 			byId[tool.id] = tool
 			table.insert(list, tool)
 			table.insert(ids, tool.id)
@@ -17,7 +18,6 @@ function CDMP.CollectToolCatalog()
 	end
 
 	local keys = ListKeys("game.tool")
-	local available = {}
 	for i = 1, #keys do
 		available[keys[i]] = true
 	end
@@ -56,37 +56,4 @@ function CDMP.CollectToolCatalog()
 		end
 	end
 	return list, byId, ids
-end
-
-function CDMP.FindTransforms(tags, fallbackCount, radius, height)
-	local result = {}
-	for i = 1, #tags do
-		local handles = FindLocations(tags[i], true)
-		for j = 1, #handles do table.insert(result, GetLocationTransform(handles[j])) end
-	end
-	if #result == 0 then
-		for i = 1, fallbackCount do
-			local angle = (i / fallbackCount) * math.pi * 2.0
-			local pos = Vec(math.cos(angle) * radius, height, math.sin(angle) * radius)
-			table.insert(result, Transform(pos, QuatEuler(0, -angle * 180.0 / math.pi, 0)))
-		end
-	end
-	return result
-end
-
-function CDMP.DeleteEntities(entities)
-	if not entities then return end
-	for i = 1, #entities do
-		local entity = entities[i]
-		if entity ~= 0 and IsHandleValid(entity) then Delete(entity) end
-	end
-end
-
-function CDMP.HasLiveEntity(entities)
-	if not entities then return false end
-	for i = 1, #entities do
-		local entity = entities[i]
-		if entity ~= 0 and IsHandleValid(entity) then return true end
-	end
-	return false
 end

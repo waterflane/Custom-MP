@@ -1,0 +1,7 @@
+<prefab version="2.0.0">
+	<group name="instance=MOD/prefab/base1.xml" pos="1.2 1.0 11.4" rot="0.0 0.0 0.0">
+		<body tags="base=1" pos="0.0 0.0 0.0" dynamic="true">
+			<vox tags="nocull" pos="0.0 0.0 0.0" density="4" file="MOD/vox/ctf.vox" object="base-pink"/>
+		</body>
+	</group>
+</prefab>

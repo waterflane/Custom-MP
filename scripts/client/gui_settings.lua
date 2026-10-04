@@ -1,359 +1,229 @@
-local CDMP_SECTIONS = {"Match", "Tools", "HUD"}
-local CDMP_AMMO_OPTIONS = nil
-local CDMP_WEIGHT_OPTIONS = nil
+-- Draft settings stay local until the host presses Start.
+local prefix = "level.cdmp.draft."
+local sections = {"MATCH", "TOOLS", "HUD", "PRESETS"}
 
-function intOptions(minValue, maxValue)
-	local result = {}
-	for i = minValue, maxValue do result[#result + 1] = option(tostring(i), i) end
-	return result
+function CDMP.Text(name)
+	return GetTranslatedStringByKey("CDMP_" .. name)
 end
 
-function ammoOptions()
-	if not CDMP_AMMO_OPTIONS then CDMP_AMMO_OPTIONS = intOptions(0, 100) end
-	return CDMP_AMMO_OPTIONS
+local function optionList(values, formatter)
+	local options = {}
+	for _, value in ipairs(values) do options[#options + 1] = option(formatter(value), value) end
+	return options
 end
 
-function weightOptions()
-	if not CDMP_WEIGHT_OPTIONS then CDMP_WEIGHT_OPTIONS = intOptions(0, 10) end
-	return CDMP_WEIGHT_OPTIONS
+local function integers(maximum)
+	local values = {}
+	for i = 0, maximum do values[#values + 1] = i end
+	return optionList(values, tostring)
 end
 
-function onOffOptions()
-	return {option("Off", 0), option("On", 1)}
+local function toggleOptions()
+	return {option(CDMP.Text("OFF"), 0), option(CDMP.Text("ON"), 1)}
 end
 
-function durationOptions(st)
-	local result = {}
-	local durations = st.durationOptions or CDMP.DURATION_OPTIONS
-	for i = 1, #durations do result[#result + 1] = option(CDMP.FormatTime(durations[i]), i) end
-	return result
+local function item(path, label, options, value)
+	return {key = prefix .. string.lower(path), label = CDMP.Text(label), options = options, default = value}
 end
 
-function headshotOptions(st)
-	local result = {}
-	local values = st.headshotOptions or CDMP.HEADSHOT_OPTIONS
-	for i = 1, #values do result[#result + 1] = option("x" .. tostring(values[i]), i) end
-	return result
-end
-
-function toolLabel(tool)
-	if tool.label and tool.label ~= "" then return tool.label end
-	return tool.id
-end
-
-function toolSettingId(tool)
-	return string.gsub(tool.id or "tool", "[^%w_]", "_")
-end
-
-function toolKey(tool, suffix)
-	return key("tool." .. toolSettingId(tool) .. "." .. suffix)
-end
-
-function getLoadout(st, tool)
-	local settings = st.settings or {}
-	local loadout = settings.loadout or {}
-	return loadout[tool.id] or {enabled = tool.startEnabled == true, ammo = tool.ammo or 0}
-end
-
-function getToolOptions(st, tool)
-	local settings = st.settings or {}
-	local options = settings.toolOptions or {}
-	return options[tool.id] or {canLoot = tool.canLoot == true, pickupAmount = tool.pickupAmount or tool.ammo or 0}
-end
-
-function getLootWeight(st, tool)
-	local settings = st.settings or {}
-	local weights = settings.lootWeights or {}
-	return weights[tool.id] or 0
-end
-
-function makeMatchItems(st)
+local function matchItems(settings)
 	return {
-		{key = key("match.time"), label = "Time", info = "Match duration", options = durationOptions(st), default = (st.settings and st.settings.durationIdx) or 2},
-		{key = key("match.headshot"), label = "Headshot", info = "Headshot damage multiplier", options = headshotOptions(st), default = (st.settings and st.settings.headshotIdx) or 3},
+		item("duration", "TIME", optionList(CDMP.DURATION_OPTIONS, CDMP.FormatTime), settings.duration),
+		item("headshot", "HEADSHOT", optionList(CDMP.HEADSHOT_OPTIONS, function(v) return "x" .. tostring(v) end), settings.headshot),
 	}
 end
 
-function getHudSettings(st)
-	local settings = st.settings or {}
-	return settings.hud or {nameplates = true}
+local function hudItems(settings)
+	local items = {}
+	for _, pair in ipairs({{"nameplates", "NAMES"}, {"hitMarker", "HIT_MARKER"}, {"killMarker", "KILL_MARKER"}, {"damageNumbers", "DAMAGE_NUMBERS"}}) do
+		items[#items + 1] = item("hud." .. pair[1], pair[2], toggleOptions(), settings.hud[pair[1]] and 1 or 0)
+	end
+	return items
 end
 
-function makeHudItems(st)
-	local hudSettings = getHudSettings(st or {})
+local function toolItems(tool, settings)
+	local path = "tools." .. CDMP.ToolStorageId(tool.id) .. "."
+	local value = settings.tools[tool.id]
 	return {
-		{key = key("hud.nameplates"), label = "Player names", info = "Show player names above heads for everyone", options = onOffOptions(), default = hudSettings.nameplates ~= false and 1 or 0},
-		{key = key("hud.hitMarker"), label = "Hit marker", info = "Show feedback when you hit a player", options = onOffOptions(), default = 1},
-		{key = key("hud.killMarker"), label = "Kill marker", info = "Show separate feedback when you kill a player", options = onOffOptions(), default = 1},
-		{key = key("hud.damageNumbers"), label = "Damage numbers", info = "Show floating damage numbers near the crosshair", options = onOffOptions(), default = 1},
+		item(path .. "startEnabled", "START_TOOL", toggleOptions(), value.startEnabled and 1 or 0),
+		item(path .. "ammo", "START_AMMO", integers(100), value.ammo),
+		item(path .. "canLoot", "IN_LOOT", toggleOptions(), value.canLoot and 1 or 0),
+		item(path .. "lootWeight", "LOOT_WEIGHT", integers(10), value.lootWeight),
+		item(path .. "pickupAmount", "PICKUP_AMOUNT", integers(100), value.pickupAmount),
 	}
+end
+
+local function seedItems(items)
+	for _, field in ipairs(items) do resetStepperValue(field.key, field.options, field.default) end
+end
+
+function CDMP_SetDraft(settings)
+	client.cdmpDraft = CDMP.Copy(settings)
+	seedItems(matchItems(settings)); seedItems(hudItems(settings))
+	for _, tool in ipairs(shared.cdmp.tools) do seedItems(toolItems(tool, settings)) end
+end
+
+function CDMP_ReadDraft()
+	local settings = CDMP.Copy(client.cdmpDraft)
+	settings.duration = readNumber(prefix .. "duration", settings.duration)
+	settings.headshot = readNumber(prefix .. "headshot", settings.headshot)
+	for name, value in pairs(settings.hud) do settings.hud[name] = readNumber(prefix .. "hud." .. string.lower(name), value and 1 or 0) == 1 end
+	for _, tool in ipairs(shared.cdmp.tools) do
+		local path = prefix .. "tools." .. CDMP.ToolStorageId(tool.id) .. "."
+		local value = settings.tools[tool.id]
+		for _, field in ipairs({"startEnabled", "canLoot"}) do value[field] = readNumber(path .. string.lower(field), value[field] and 1 or 0) == 1 end
+		for _, field in ipairs({"ammo", "lootWeight", "pickupAmount"}) do value[field] = readNumber(path .. string.lower(field), value[field]) end
+	end
+	return CDMP.ValidateSettings(settings, shared.cdmp.mode, shared.cdmp.tools)
 end
 
 function hudOptionEnabled(name)
-	return readNumber(key("hud." .. name), 1) == 1
+	return shared.cdmp and shared.cdmp.settings.hud[name] == true
 end
 
-function makeToolItems(st, tool)
-	local loadout = getLoadout(st, tool)
-	local options = getToolOptions(st, tool)
-	return {
-		{key = toolKey(tool, "startEnabled"), label = "Starting tool", info = "Give this tool on spawn", options = onOffOptions(), default = loadout.enabled and 1 or 0},
-		{key = toolKey(tool, "ammo"), label = "Starting ammo", info = "Ammo on spawn, 0-100", options = ammoOptions(), default = CDMP.Clamp(loadout.ammo or tool.ammo or 0, 0, 100)},
-		{key = toolKey(tool, "canLoot"), label = "Spawn in loot", info = "Allow this tool in loot crates", options = onOffOptions(), default = options.canLoot and 1 or 0},
-		{key = toolKey(tool, "lootWeight"), label = "Loot weight", info = "Spawn chance weight, 0-10", options = weightOptions(), default = CDMP.Clamp(getLootWeight(st, tool), 0, 10)},
-		{key = toolKey(tool, "pickupAmount"), label = "Pickup amount", info = "Ammo received from a crate", options = ammoOptions(), default = CDMP.Clamp(options.pickupAmount or tool.pickupAmount or tool.ammo or 0, 0, 100)},
-	}
+local function drawItems(items, width, rowHeight, rows)
+	local pages = math.max(1, math.ceil(#items / rows))
+	client.cdmpPage = math.floor(CDMP.Clamp(client.cdmpPage or 1, 1, pages))
+	local first = (client.cdmpPage - 1) * rows + 1
+	for i = first, math.min(#items, first + rows - 1) do
+		local field = items[i]
+		UiPush(); UiAlign("left middle")
+		local fits, label = uiTextConstrained(field.label, "regular.ttf", 23 * FONT_SCALE, width - 252)
+		_drawSettingsItemStepper(field.key, label, fits and "" or field.label, field.options, width, false)
+		UiPop(); UiTranslate(0, rowHeight)
+	end
+	return pages
 end
 
-function initializeAllSettings(st)
-	local groups = {makeMatchItems(st), makeHudItems(st)}
-	local tools = st.tools or {}
-	for i = 1, #tools do groups[#groups + 1] = makeToolItems(st, tools[i]) end
-	for i = 1, #groups do
-		for j = 1, #groups[i] do
-			local item = groups[i][j]
-			if client.cdmpSettingsSeeded then
-				ensureStepperValue(item.key, item.options, item.default)
-			else
-				resetStepperValue(item.key, item.options, item.default)
+local function drawTools(width, rowHeight, rows)
+	local tools = shared.cdmp.tools
+	local pages = math.max(1, math.ceil(#tools / rows))
+	client.cdmpPage = math.floor(CDMP.Clamp(client.cdmpPage or 1, 1, pages))
+	local first = (client.cdmpPage - 1) * rows + 1
+	for i = first, math.min(#tools, first + rows - 1) do
+		UiPush(); UiTranslate(width / 2, 0); UiAlign("center middle")
+		local _, label = uiTextConstrained(tools[i].label, FONT_BOLD, FONT_SIZE_22, width - 40)
+		if uiDrawSecondaryButton(label, width) then client.cdmpSelectedTool = i; client.cdmpPage = 1 end
+		UiPop(); UiTranslate(0, rowHeight)
+	end
+	return pages
+end
+
+local function drawPresets(width, rowHeight, rows)
+	local options = {}
+	for i = 1, CDMP.PRESET_COUNT do options[#options + 1] = option(CDMP.Text("PRESET") .. " " .. i, i) end
+	ensureStepperValue(prefix .. "slot", options, 1)
+	local slot = math.floor(CDMP.Clamp(readNumber(prefix .. "slot", 1), 1, CDMP.PRESET_COUNT))
+	local exists = CDMP.PresetExists(slot)
+	local pages = math.max(1, math.ceil(5 / rows))
+	client.cdmpPage = math.floor(CDMP.Clamp(client.cdmpPage or 1, 1, pages))
+	local first = (client.cdmpPage - 1) * rows + 1
+	for index = first, math.min(5, first + rows - 1) do
+		UiPush()
+		if index == 1 then
+			UiAlign("left middle")
+			_drawSettingsItemStepper(prefix .. "slot", CDMP.Text("PRESET"), "", options, width, false)
+		else
+			UiTranslate(width / 2, 0); UiAlign("center middle")
+			if index == 2 then
+				UiFont(FONT_BOLD, FONT_SIZE_22); UiText(CDMP.Text(exists and "SAVED" or "EMPTY"))
+			elseif index == 3 and uiDrawSecondaryButton(CDMP.Text("SAVE"), width) then
+				CDMP.SavePreset(slot, CDMP_ReadDraft()); client.cdmpNotice = CDMP.Text("PRESET_SAVED")
+			elseif index == 4 and uiDrawSecondaryButton(CDMP.Text("LOAD"), width, not exists) then
+				local saved = CDMP.LoadPreset(slot)
+				if saved then
+					local draft, missing = CDMP.PreparePreset(saved, shared.cdmp.mode, shared.cdmp.tools)
+					CDMP_SetDraft(draft)
+					client.cdmpNotice = #missing > 0 and (CDMP.Text("MISSING_TOOLS") .. " " .. table.concat(missing, ", ")) or CDMP.Text("PRESET_LOADED")
+				end
+			elseif index == 5 and uiDrawSecondaryButton(CDMP.Text("DELETE"), width, not exists) then
+				CDMP.DeletePreset(slot); client.cdmpNotice = CDMP.Text("PRESET_DELETED")
 			end
 		end
+		UiPop(); UiTranslate(0, rowHeight)
 	end
-	client.cdmpSettingsSeeded = true
+	return pages
 end
 
-function resetItems(items)
-	for i = 1, #items do
-		local item = items[i]
-		resetStepperValue(item.key, item.options, item.default)
-	end
-end
-
-function encodeLoadoutSettings(st)
-	local parts = {}
-	local tools = st.tools or {}
-	for i = 1, #tools do
-		local tool = tools[i]
-		local loadout = getLoadout(st, tool)
-		local enabled = readNumber(toolKey(tool, "startEnabled"), loadout.enabled and 1 or 0)
-		local ammo = readNumber(toolKey(tool, "ammo"), loadout.ammo or tool.ammo or 0)
-		parts[#parts + 1] = tool.id .. ":" .. tostring(CDMP.Clamp(enabled, 0, 1)) .. ":" .. tostring(CDMP.Clamp(ammo, 0, 100))
-	end
-	return table.concat(parts, ";")
-end
-
-function encodeLootSettings(st)
-	local parts = {}
-	local tools = st.tools or {}
-	for i = 1, #tools do
-		local tool = tools[i]
-		local weight = readNumber(toolKey(tool, "lootWeight"), getLootWeight(st, tool))
-		parts[#parts + 1] = tool.id .. ":" .. tostring(CDMP.Clamp(weight, 0, 10))
-	end
-	return table.concat(parts, ";")
-end
-
-function encodeToolOptions(st)
-	local parts = {}
-	local tools = st.tools or {}
-	for i = 1, #tools do
-		local tool = tools[i]
-		local options = getToolOptions(st, tool)
-		local canLoot = readNumber(toolKey(tool, "canLoot"), options.canLoot and 1 or 0)
-		local pickupAmount = readNumber(toolKey(tool, "pickupAmount"), options.pickupAmount or tool.pickupAmount or tool.ammo or 0)
-		parts[#parts + 1] = tool.id .. ":" .. tostring(CDMP.Clamp(canLoot, 0, 1)) .. ":" .. tostring(CDMP.Clamp(pickupAmount, 0, 100))
-	end
-	return table.concat(parts, ";")
-end
-
-function encodeHudSettings(st)
-	local hudSettings = getHudSettings(st)
-	local nameplates = readNumber(key("hud.nameplates"), hudSettings.nameplates ~= false and 1 or 0)
-	return "nameplates:" .. tostring(CDMP.Clamp(nameplates, 0, 1))
-end
-
-function applySettingsAndStart(st)
-	local durationIdx = readNumber(key("match.time"), (st.settings and st.settings.durationIdx) or 2)
-	local headshotIdx = readNumber(key("match.headshot"), (st.settings and st.settings.headshotIdx) or 3)
-	ServerCall("server.settingsApplyAndStart", GetLocalPlayer(), durationIdx, headshotIdx, encodeLoadoutSettings(st), encodeLootSettings(st), encodeToolOptions(st), encodeHudSettings(st))
-end
-
-function drawSectionButton(label, width, active)
-	UiPush()
-	local pressed = uiDrawSecondaryButton(label, width)
-	if active then
-		UiTranslate(0, 24)
-		UiAlign("center top")
-		UiColor(COLOR_YELLOW)
-		UiRect(width - 10, 3)
-	end
-	UiPop()
-	return pressed
-end
-
-function drawStepperList(items, first, last, contentWidth, rowHeight)
-	for i = first, last do
-		local item = items[i]
-		ensureStepperValue(item.key, item.options, item.default)
-		UiPush()
-		UiAlign("left middle")
-		_drawSettingsItemStepper(item.key, item.label, item.info, item.options, contentWidth, false)
-		UiPop()
-		UiTranslate(0, rowHeight)
-	end
-end
-
-function drawToolList(st, contentWidth, rowCount, page)
-	local tools = st.tools or {}
-	local first = (page - 1) * rowCount + 1
-	local last = math.min(#tools, first + rowCount - 1)
-	for i = first, last do
-		local tool = tools[i]
-		UiPush()
-		UiTranslate(contentWidth / 2, 0)
-		UiAlign("center middle")
-		if uiDrawSecondaryButton(toolLabel(tool), contentWidth) then
-			client.cdmpSelectedToolIndex = i
-			client.cdmpSettingsPage = 1
-		end
-		UiPop()
-		UiTranslate(0, 42)
-	end
-	return math.max(1, math.ceil(#tools / rowCount))
-end
-
-function drawSettingsPanel(st)
-	if not client.cdmpSettingsVisible then return end
-
-	local screenW = UiCenter() * 2
-	local screenH = UiMiddle() * 2
-	local width = math.min(760, screenW - 60)
-	local height = math.min(780, screenH - 40)
-	local panelX = 30
-	local panelY = 20
-	local margin = 30
-	local section = client.cdmpSettingsSection or 1
-	local contentWidth = width - margin * 2
-	local rowHeight = 42
-	local pageCount = 1
-	local page = client.cdmpSettingsPage or 1
-
-	navigationBeginGroup("cdmpSettings")
-	UiMakeInteractive()
-	UiPush()
-	UiTranslate(panelX, panelY)
-	UiAlign("left top")
+local function drawSettingsPanel()
+	local width, height = math.min(760, UiWidth() - 60), math.min(780, UiHeight() - 40)
+	local contentWidth, rowHeight = width - 60, 48
+	local rows = math.max(1, math.floor((height - 290) / rowHeight))
+	local section = client.cdmpSection or 1
+	navigationBeginGroup("cdmpSettings", true)
+	UiMakeInteractive(); UiPush(); UiTranslate(30, 20); UiAlign("left top")
 	uiDrawPanel(width, height, 16)
-
-	UiTranslate(margin, 34)
-	UiColor(COLOR_WHITE)
-	UiFont(FONT_BOLD, FONT_SIZE_30)
-	UiText("Game mode settings")
-	UiTranslate(0, 32)
-	UiColor(0.53, 0.53, 0.53, 1)
-	UiRect(contentWidth, 2)
-
-	UiTranslate(0, 28)
-	local tabWidth = (contentWidth - 20) / #CDMP_SECTIONS
-	for i = 1, #CDMP_SECTIONS do
-		UiPush()
-		UiTranslate((i - 1) * (tabWidth + 10) + tabWidth / 2, 0)
-		UiAlign("center middle")
-		if drawSectionButton(CDMP_SECTIONS[i], tabWidth, section == i) then
-			client.cdmpSettingsSection = i
-			client.cdmpSettingsPage = 1
-			client.cdmpSelectedToolIndex = nil
+	UiTranslate(30, 34); UiColor(COLOR_WHITE); UiFont(FONT_BOLD, FONT_SIZE_30); UiText(CDMP.Text("SETTINGS"))
+	UiTranslate(0, 50)
+	local tabWidth = (contentWidth - 30) / 4
+	for i, name in ipairs(sections) do
+		UiPush(); UiTranslate((i - 1) * (tabWidth + 10) + tabWidth / 2, 0); UiAlign("center middle")
+		if uiDrawSecondaryButton(CDMP.Text(name), tabWidth) then
+			client.cdmpSection = i; client.cdmpPage = 1; client.cdmpSelectedTool = nil; client.cdmpNotice = nil
 		end
+		if i == section then UiTranslate(0, 24); UiColor(COLOR_YELLOW); UiRect(tabWidth - 10, 3) end
 		UiPop()
 	end
-
-	local availableRows = math.floor((height - 280) / rowHeight)
-	if availableRows < 4 then availableRows = 4 end
-	UiPush()
-	UiTranslate(0, 52)
-	if section == 1 then
-		local items = makeMatchItems(st)
-		pageCount = 1
-		drawStepperList(items, 1, #items, contentWidth, rowHeight)
-	elseif section == 3 then
-		local items = makeHudItems(st)
-		pageCount = 1
-		drawStepperList(items, 1, #items, contentWidth, rowHeight)
-	elseif client.cdmpSelectedToolIndex then
-		local tools = st.tools or {}
-		local tool = tools[client.cdmpSelectedToolIndex]
-		if tool then
-			UiPush()
-			UiTranslate(contentWidth / 2, 0)
-			UiAlign("center middle")
-			if uiDrawSecondaryButton("Back", contentWidth) then
-				client.cdmpSelectedToolIndex = nil
-				client.cdmpSettingsPage = 1
-			end
-			UiPop()
-			UiTranslate(0, 48)
-			local items = makeToolItems(st, tool)
-			pageCount = 1
-			drawStepperList(items, 1, #items, contentWidth, rowHeight)
-		else
-			client.cdmpSelectedToolIndex = nil
-		end
-	else
-		pageCount = drawToolList(st, contentWidth, availableRows, page)
-	end
+	UiPush(); UiTranslate(0, 58)
+	local pages = 1
+	if section == 1 then pages = drawItems(matchItems(client.cdmpDraft), contentWidth, rowHeight, rows)
+	elseif section == 3 then pages = drawItems(hudItems(client.cdmpDraft), contentWidth, rowHeight, rows)
+	elseif section == 4 then pages = drawPresets(contentWidth, rowHeight, rows)
+	elseif client.cdmpSelectedTool then pages = drawItems(toolItems(shared.cdmp.tools[client.cdmpSelectedTool], client.cdmpDraft), contentWidth, rowHeight, rows)
+	else pages = drawTools(contentWidth, rowHeight, rows) end
 	UiPop()
-
-	page = CDMP.Clamp(client.cdmpSettingsPage or 1, 1, pageCount)
-	client.cdmpSettingsPage = page
-	UiPush()
-	UiTranslate(contentWidth / 2, height - 220)
-	UiAlign("center middle")
-	local navWidth = 70
-	local pageNavigationDisabled = pageCount <= 1 or client.cdmpSelectedToolIndex ~= nil
-	UiPush()
-	UiTranslate(-150, 0)
-	if uiDrawSecondaryButton("<", navWidth, pageNavigationDisabled or page <= 1) and page > 1 and not pageNavigationDisabled then client.cdmpSettingsPage = page - 1 end
-	UiPop()
-	UiPush()
-	UiColor(COLOR_WHITE)
-	UiFont(FONT_BOLD, FONT_SIZE_22)
-	UiText("Page " .. tostring(page) .. "/" .. tostring(pageCount))
-	UiPop()
-	UiPush()
-	UiTranslate(150, 0)
-	if uiDrawSecondaryButton(">", navWidth, pageNavigationDisabled or page >= pageCount) and page < pageCount and not pageNavigationDisabled then client.cdmpSettingsPage = page + 1 end
-	UiPop()
-	UiPop()
-
-	UiPush()
-	UiTranslate(contentWidth / 2, height - 172)
-	UiAlign("center middle")
+	UiPush(); UiTranslate(contentWidth / 2, height - 166); UiAlign("center middle")
+	UiPush(); UiTranslate(-130, 0)
+	if uiDrawSecondaryButton("<", 70, client.cdmpPage <= 1) then client.cdmpPage = client.cdmpPage - 1 end
+	UiPop(); UiFont(FONT_BOLD, FONT_SIZE_22); UiText(tostring(client.cdmpPage) .. " / " .. pages)
+	UiPush(); UiTranslate(130, 0)
+	if uiDrawSecondaryButton(">", 70, client.cdmpPage >= pages) then client.cdmpPage = client.cdmpPage + 1 end
+	UiPop(); UiTranslate(0, 48)
 	local buttonWidth = (contentWidth - 20) / 2
-	local resetItemsList = makeMatchItems(st)
-	if section == 2 then
-		resetItemsList = {}
-		if client.cdmpSelectedToolIndex and (st.tools or {})[client.cdmpSelectedToolIndex] then
-			resetItemsList = makeToolItems(st, (st.tools or {})[client.cdmpSelectedToolIndex])
-		else
-			local tools = st.tools or {}
-			for i = 1, #tools do
-				local toolItems = makeToolItems(st, tools[i])
-				for j = 1, #toolItems do resetItemsList[#resetItemsList + 1] = toolItems[j] end
-			end
-		end
-	elseif section == 3 then
-		resetItemsList = makeHudItems(st)
+	UiPush(); UiTranslate(-(buttonWidth + 20) / 2, 0)
+	if client.cdmpSelectedTool then
+		if uiDrawSecondaryButton(CDMP.Text("BACK"), buttonWidth) then client.cdmpSelectedTool = nil; client.cdmpPage = 1 end
+	elseif uiDrawSecondaryButton(CDMP.Text("RESET"), buttonWidth) then
+		CDMP_SetDraft(CDMP.DefaultSettings(shared.cdmp.mode, shared.cdmp.tools)); client.cdmpNotice = nil
 	end
-	UiPush()
-	UiTranslate(-(buttonWidth + 20) / 2, 0)
-	if uiDrawSecondaryButton("Reset", buttonWidth) then resetItems(resetItemsList) end
-	UiPop()
-	UiPush()
-	UiTranslate((buttonWidth + 20) / 2, 0)
-	if uiDrawSecondaryButton("Close", buttonWidth) then client.cdmpSettingsVisible = false end
-	UiPop()
-	UiPop()
+	UiPop(); UiPush(); UiTranslate((buttonWidth + 20) / 2, 0)
+	if uiDrawSecondaryButton(CDMP.Text("CLOSE"), buttonWidth) then client.cdmpSettingsVisible = false end
+	UiPop(); UiPop()
+	if client.cdmpNotice then
+		UiPush(); UiTranslate(0, height - 100); UiAlign("left top"); UiFont(FONT_MEDIUM, FONT_SIZE_18)
+		local _, notice = uiTextConstrained(client.cdmpNotice, FONT_MEDIUM, FONT_SIZE_18, contentWidth, 2)
+		UiText(notice); UiPop()
+	end
+	UiPop(); navigationEndGroup()
+end
 
-	UiPop()
-	navigationEndGroup()
+function CDMP_DrawSetup()
+	SetBool("game.disablemap", true)
+	if not shared.cdmp then return end
+	if not IsPlayerHost(GetLocalPlayer()) then
+		UiPush(); UiTranslate(UiCenter(), UiMiddle() + 300)
+		uiDrawTextPanel("loc@UI_TEXT_WAITING_FOR_HOST", 1); UiPop()
+		return
+	end
+	if not client.cdmpDraft then CDMP_SetDraft(shared.cdmp.settings); client.cdmpPage = 1 end
+	navigationBeginGroup("cdmpHostMenu", false, client.cdmpSettingsVisible or client.cdmpStarting)
+	if client.cdmpSettingsVisible or client.cdmpStarting then UiDisableInput() end
+	UiMakeInteractive(); UiPush()
+	UiTranslate(UiCenter(), math.min(UiMiddle() + 300, UiHeight() - 186)); UiAlign("center top")
+	uiDrawPanel(330, 166, 16)
+	UiTranslate(0, 14); UiColor(COLOR_WHITE); UiFont(FONT_BOLD, FONT_SIZE_30); UiText("loc@UI_TEXT_HOST_MENU")
+	UiTranslate(0, 36)
+	if uiDrawSecondaryButton("loc@UI_BUTTON_GAME_MODE_SETTINGS", 290, client.cdmpStarting) then client.cdmpSettingsVisible = not client.cdmpSettingsVisible end
+	UiTranslate(0, 50)
+	if uiDrawPrimaryButton("loc@UI_BUTTON_START", 290, client.cdmpStarting) then
+		client.cdmpStarting = true
+		ServerCall("server.settingsApplyAndStart", GetLocalPlayer(), CDMP_ReadDraft())
+	end
+	UiPop(); navigationEndGroup()
+	if client.cdmpSettingsVisible then drawSettingsPanel() end
+end
+
+function CDMP_DrawCombat()
+	if not shared.cdmp or not hudGameIsSetup() or not countdownDone() or shared.time <= 0 then return end
+	drawHitMarkers(shared.cdmp); drawDamageNumbers(shared.cdmp)
 end
