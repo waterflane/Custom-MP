@@ -22,7 +22,7 @@ end
 
 function CDMP.ConfirmPresetRename()
 	CDMP.RenamePreset(client.cdmpSelectedPreset or 1, client.cdmpNameBuffer)
-	client.cdmpNotice = CDMP.Text("PRESET_RENAMED")
+	CDMP.Notify(CDMP.Text("PRESET_RENAMED"))
 	CDMP.ClosePresetModal()
 end
 

@@ -33,7 +33,7 @@ Unlimited matches show elapsed time with ∞ and do not end by timer. Finite mat
 
 The five slots are initially empty and belong to the local host. They are shared across these three modes and all maps, and persist across game restarts through `savegame.mod.cdmp.presets`. The storage implementation is in `scripts/shared/presets.lua`; the game writes its own mod save data, rather than modifying a Lua source file.
 
-Save writes all current settings into the selected slot; saving again replaces that slot. Load fills the setup screen without starting a match. Clear settings empties the slot without changing the current draft or its name. Rename works for empty and saved slots, accepts up to 32 characters and uses a physical keyboard with an EN/RU layout switch, Shift/Caps Lock, Backspace and Ctrl+A. There is no on-screen keyboard. Presets do not contain a map, teams, scores or match state.
+Save writes all current settings into the selected slot; saving again replaces that slot. Load fills the setup screen without starting a match. Clear settings empties the slot without changing the current draft or its name. Rename works for empty and saved slots, accepts up to 32 characters and uses a physical keyboard with an EN/RU layout switch, Shift/Caps Lock, Backspace and Ctrl+A. There is no on-screen keyboard. Presets do not contain a map, teams, scores or match state. Preset actions show stacked notifications at the bottom left, independently of the settings window; each fades out within five seconds.
 
 Missing Workshop tools are skipped with a message. Loading never changes the saved slot, so those tools remain in the preset if they become available again. Explicitly overwriting the slot saves only the currently available tool configuration.
 

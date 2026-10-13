@@ -140,7 +140,7 @@ local function drawPresets(width)
 	local buttonWidth = (width - 16) / 2
 	UiPush(); UiTranslate(buttonWidth / 2, 0)
 	if uiDrawPrimaryButton(CDMP.Text("SAVE"), buttonWidth) then
-		CDMP.SavePreset(slot, CDMP_ReadDraft()); client.cdmpNotice = CDMP.Text("PRESET_SAVED")
+		CDMP.SavePreset(slot, CDMP_ReadDraft()); CDMP.Notify(CDMP.Text("PRESET_SAVED"))
 	end
 	UiPop(); UiPush(); UiTranslate(width - buttonWidth / 2, 0)
 	if uiDrawSecondaryButton(CDMP.Text("LOAD"), buttonWidth, not exists) then
@@ -148,7 +148,7 @@ local function drawPresets(width)
 		if saved then
 			local draft, missing = CDMP.PreparePreset(saved, shared.cdmp.mode, shared.cdmp.tools)
 			CDMP_SetDraft(draft)
-			client.cdmpNotice = #missing > 0 and (CDMP.Text("MISSING_TOOLS") .. " " .. table.concat(missing, ", ")) or CDMP.Text("PRESET_LOADED")
+			CDMP.Notify(#missing > 0 and (CDMP.Text("MISSING_TOOLS") .. " " .. table.concat(missing, ", ")) or CDMP.Text("PRESET_LOADED"))
 		end
 	end
 	UiPop(); UiTranslate(0, 50)
@@ -156,7 +156,7 @@ local function drawPresets(width)
 	if uiDrawSecondaryButton(CDMP.Text("RENAME"), buttonWidth) then CDMP.OpenPresetRename(slot) end
 	UiPop(); UiPush(); UiTranslate(width - buttonWidth / 2, 0)
 	if uiDrawSecondaryButton(CDMP.Text("DELETE"), buttonWidth, not exists) then
-		CDMP.DeletePreset(slot); client.cdmpNotice = CDMP.Text("PRESET_DELETED")
+		CDMP.DeletePreset(slot); CDMP.Notify(CDMP.Text("PRESET_DELETED"))
 	end
 	UiPop(); UiPop()
 	return 1
@@ -177,7 +177,7 @@ local function drawSettingsPanel()
 	for i, name in ipairs(sections) do
 		UiPush(); UiTranslate((i - 1) * (tabWidth + 10) + tabWidth / 2, 0); UiAlign("center middle")
 		if uiDrawSecondaryButton(CDMP.Text(name), tabWidth) then
-			client.cdmpSection = i; client.cdmpPage = 1; client.cdmpSelectedTool = nil; client.cdmpNotice = nil
+			client.cdmpSection = i; client.cdmpPage = 1; client.cdmpSelectedTool = nil
 		end
 		if i == section then UiTranslate(0, 24); UiColor(COLOR_YELLOW); UiRect(tabWidth - 10, 3) end
 		UiPop()
@@ -205,16 +205,12 @@ local function drawSettingsPanel()
 	if client.cdmpSelectedTool then
 		if uiDrawSecondaryButton(CDMP.Text("BACK"), buttonWidth) then client.cdmpSelectedTool = nil; client.cdmpPage = 1 end
 	elseif uiDrawSecondaryButton(CDMP.Text("RESET"), buttonWidth) then
-		CDMP_SetDraft(CDMP.DefaultSettings(shared.cdmp.mode, shared.cdmp.tools)); client.cdmpNotice = nil
+		CDMP_SetDraft(CDMP.DefaultSettings(shared.cdmp.mode, shared.cdmp.tools))
 	end
 	UiPop(); UiPush(); UiTranslate((buttonWidth + 20) / 2, 0)
 	if uiDrawSecondaryButton(CDMP.Text("CLOSE"), buttonWidth) then client.cdmpSettingsVisible = false end
 	UiPop(); UiPop()
-	if client.cdmpNotice then
-		UiPush(); UiTranslate(0, height - 100); UiAlign("left top"); UiFont(FONT_MEDIUM, FONT_SIZE_18)
-		local _, notice = uiTextConstrained(client.cdmpNotice, FONT_MEDIUM, FONT_SIZE_18, contentWidth, 2)
-		UiText(notice); UiPop()
-	end
+
 	UiPop(); navigationEndGroup()
 end
 

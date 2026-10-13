@@ -6,5 +6,6 @@
 #include "../server/combat.lua"
 #include "../client/gui.lua"
 #include "../client/gui_widgets.lua"
+#include "../client/gui_notices.lua"
 #include "../client/gui_settings.lua"
 #include "../client/gui_combat.lua"

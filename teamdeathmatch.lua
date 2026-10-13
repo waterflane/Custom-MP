@@ -137,7 +137,7 @@ function client.tick(dt)
 	teamsSetTags()
 end
 
-function client.draw(dt)
+local function drawMode(dt)
 	hudDrawTitle(dt, "loc@TDM_MOD_TITLE", countdownGetTime() > 0.4)
 
 	if not countdownDone() then
@@ -238,6 +238,11 @@ function client.draw(dt)
 	hudDrawFade(dt) -- full screen fade in/out
 end
 
+
+function client.draw(dt)
+	drawMode(dt)
+	CDMP_DrawNotices()
+end
 
 function client.render(dt)
 	spectateRender(dt)

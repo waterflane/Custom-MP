@@ -634,7 +634,7 @@ function client.tick(dt)
 	teamsSetTags()
 end
 
-function client.draw(dt)
+local function drawMode(dt)
 	hudDrawTitle(dt, "loc@CTF_MOD_TITLE", countdownGetTime() > 0.4)
 	hudDrawBanner(dt)
 
@@ -823,6 +823,11 @@ function client.draw(dt)
 	hudDrawInputActions(actions)
 
 	hudDrawFade(dt) -- full screen fade in/out
+end
+
+function client.draw(dt)
+	drawMode(dt)
+	CDMP_DrawNotices()
 end
 
 function client.render(dt)

@@ -57,6 +57,8 @@ for _, id in ipairs({'gun','sledge','spraycan','extinguisher','shotgun','rocket'
     SetString('game.tool.'..id..'.name',id)
 end
 function IsPlayerHost(id) return id == 1 end
+clockTime=0
+function GetTime() return clockTime end
 function GetLocalPlayer() return 1 end
 function IsPlayerValid(id) return id == 1 or id == 2 end
 function GetPlayerHealth(id) return health[id] end
@@ -93,6 +95,7 @@ function UiCenter() return UiWidth()/2 end
 function UiMiddle() return UiHeight()/2 end
 function UiTranslate() end
 function UiRotate() end
+function UiWordWrap() end
 function UiSound() end
 function navigationMakeLastItemDefault() end
 function UiAlign() end
@@ -170,7 +173,7 @@ class ModTests(unittest.TestCase):
         for filename in (
             "shared/config.lua", "shared/world.lua", "shared/presets.lua",
             "server/settings.lua", "server/combat.lua", "client/gui.lua",
-            "client/gui_widgets.lua", "client/gui_settings.lua", "client/gui_combat.lua",
+            "client/gui_widgets.lua", "client/gui_notices.lua", "client/gui_settings.lua", "client/gui_combat.lua",
         ):
             self.lua.execute(stripped(ROOT / "scripts" / filename))
         self.lua.execute('CDMP_ServerInit("dm", {{Transform()}, {Transform()}, {Transform()}})')
@@ -438,6 +441,46 @@ class ModTests(unittest.TestCase):
             assert(CDMP.DrawPresetCard(3,620,false,false) and #uiStack == 0)
         """)
 
+    def test_notices_expire_independently_of_settings(self):
+        self.check(UI_MOCK)
+        self.check("""
+            client.cdmpSettingsVisible=true; client.cdmpSection=4
+            uiClicks.CDMP_SAVE=true
+            CDMP_DrawSetup()
+            assert(#client.cdmpNotices == 1 and client.cdmpNotices[1].text == 'CDMP_PRESET_SAVED')
+            clockTime=1; CDMP.Notify('second')
+            clockTime=2; CDMP.Notify('third')
+            client.cdmpSettingsVisible=false; shared._hud.gameIsSetup=true
+            CDMP_DrawNotices()
+            assert(#client.cdmpNotices == 3 and #uiStack == 0)
+            assert(CDMP.NoticeAlpha(1) == 1 and CDMP.NoticeAlpha(4.6) > 0 and CDMP.NoticeAlpha(4.6) < 1)
+            assert(CDMP.NoticeAlpha(5) == 0)
+            clockTime=5; CDMP_DrawNotices()
+            assert(#client.cdmpNotices == 2 and client.cdmpNotices[1].text == 'second')
+            clockTime=6; CDMP_DrawNotices()
+            assert(#client.cdmpNotices == 1 and client.cdmpNotices[1].text == 'third')
+            clockTime=7; CDMP_DrawNotices()
+            assert(#client.cdmpNotices == 0 and #uiStack == 0)
+        """)
+
+    def test_notice_cards_reserve_wrapped_height(self):
+        self.check(UI_MOCK)
+        self.check("""
+            CDMP.Notify('first'); CDMP.Notify('second'); CDMP.Notify('third')
+            clockTime=1
+            local movements={}
+            function UiTranslate(x,y) movements[#movements+1]={x,y} end
+            function UiGetTextSize() return 400,80 end
+            CDMP_DrawNotices()
+            assert(movements[1][1] == 24 and movements[1][2] == UiHeight()-24)
+            local cards,gaps=0,0
+            for _,move in ipairs(movements) do
+                if move[1] == 0 and move[2] == -108 then cards=cards+1 end
+                if move[1] == 0 and move[2] == -10 then gaps=gaps+1 end
+            end
+            assert(cards == 3 and gaps == 3 and #uiStack == 0)
+        """)
+
     def test_tool_slider_rounding_focus_and_disabled_input(self):
         self.check(UI_MOCK)
         self.check("""
@@ -679,6 +722,40 @@ class SourceTests(unittest.TestCase):
                 self.assertEqual(lua.eval("_spawnState.respawnTime"), 3 if mode == "ctf" else 10)
                 if mode == "ctf":
                     lua.execute("assert(_toolState.notDroppableTools.flag1 and _toolState.notDroppableTools.flag2)")
+
+    def test_all_modes_draw_notices_after_setup_and_match(self):
+        for filename in ('cdmp.lua', 'teamdeathmatch.lua', 'capturetheflag.lua'):
+            with self.subTest(mode=filename):
+                lua = LuaRuntime()
+                lua.execute(MOCK)
+                lua.execute(expand(ROOT / filename))
+                lua.execute(UI_MOCK)
+                lua.execute("""
+                    function hudDrawTitle() end
+                    function hudDrawBanner() end
+                    function countdownGetTime() return 1 end
+                    function countdownDone() return false end
+                    function hudDrawGameModeHelpText() end
+                    function hudDrawPlayerWorldMarkers() end
+                    function GetAllPlayers() return {} end
+                    function eventlogDraw() end
+                    function hudDrawPlayerList() end
+                    function teamsIsSetup() return false end
+                    function teamsDraw() end
+                    function CDMP_DrawSetup() end
+                    function CDMP.DrawMatchTimer() end
+                    function countdownDraw() return true end
+                    shared.time=300
+                    CDMP.Notify('setup')
+                    clockTime=1
+                    client.draw(0.016)
+                    assert(uiTexts[#uiTexts] == 'setup')
+                    shared._hud.gameIsSetup=true
+                    CDMP.Notify('started')
+                    clockTime=2
+                    client.draw(0.016)
+                    assert(uiTexts[#uiTexts-1] == 'started' and uiTexts[#uiTexts] == 'setup' and #uiStack == 0)
+                """)
 
     def test_lua51_syntax(self):
         lua = LuaRuntime()
