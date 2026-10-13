@@ -380,8 +380,7 @@ class ModTests(unittest.TestCase):
             function UiIsComponentInFocus() return false end
             assert(client.cdmpSelectedPreset == 2 and not client.cdmpModal and not calls.rpc)
             CDMP.OpenPresetRename(2)
-            client.cdmpNameLanguage='ru'
-            CDMP.PresetNameKey('q'); CDMP.PresetNameKey('w')
+            CDMP.PresetNameKey('й'); CDMP.PresetNameKey('ц')
             assert(client.cdmpNameBuffer == 'йц')
             CDMP.BackspacePresetName()
             assert(client.cdmpNameBuffer == 'й')
@@ -393,7 +392,7 @@ class ModTests(unittest.TestCase):
             assert(CDMP.GetPresetName(2) == 'Мой пресет' and not client.cdmpModal and #uiStack == 0)
         """)
 
-    def test_physical_preset_name_input_case_and_layout(self):
+    def test_physical_preset_name_input_case(self):
         self.check(UI_MOCK)
         self.check("""
             CDMP.OpenPresetRename(1)
@@ -409,11 +408,11 @@ class ModTests(unittest.TestCase):
             CDMP.PresetNameKey('T')
             assert(client.cdmpNameBuffer == 'qwERt')
             function InputDown() return false end
-            CDMP.OpenPresetRename(2); client.cdmpNameLanguage='ru'
-            CDMP.PresetNameKey('Q'); CDMP.PresetNameKey('Ц')
+            CDMP.OpenPresetRename(2)
+            CDMP.PresetNameKey('Й'); CDMP.PresetNameKey('Ц')
             assert(client.cdmpNameBuffer == 'йц')
             function InputDown(key) return key == 'shift' end
-            CDMP.PresetNameKey('W')
+            CDMP.PresetNameKey('ц')
             assert(client.cdmpNameBuffer == 'йцЦ')
             function InputDown(key) return key == 'ctrl' end
             CDMP.PresetNameKey('A')
@@ -421,8 +420,12 @@ class ModTests(unittest.TestCase):
             function InputDown() return false end
             CDMP.PresetNameKey('backspace')
             assert(client.cdmpNameBuffer == '')
+            local buttons={}
+            function uiDrawSecondaryButton(label) buttons[#buttons+1]=label; return false end
+            uiDrawPrimaryButton=uiDrawSecondaryButton
             CDMP_DrawPresetModal()
-            assert(#uiStack == 0)
+            assert(#uiStack == 0 and #buttons == 2)
+            assert(buttons[1] == 'CDMP_CONFIRM' and buttons[2] == 'CDMP_CANCEL')
             for _, text in ipairs(uiTexts) do assert(text ~= 'q' and text ~= 'й') end
         """)
 

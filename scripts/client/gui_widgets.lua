@@ -10,7 +10,6 @@ function CDMP.OpenPresetRename(slot)
 	client.cdmpNameBuffer = CDMP.GetPresetName(slot)
 	client.cdmpNameSelectAll = true
 	client.cdmpNameUpper = false
-	client.cdmpNameLanguage = client.cdmpNameLanguage or "en"
 	client.cdmpModal = "rename"
 end
 
@@ -46,19 +45,12 @@ function CDMP.BackspacePresetName()
 	end
 end
 
-local englishRows = {"1234567890", "qwertyuiop[]", "asdfghjkl;'", "zxcvbnm,./"}
-local russianRows = {"1234567890", "йцукенгшщзхъ", "фывапролджэ", "ячсмитьбю."}
 local function symbols(text)
 	local result = {}
 	for char in text:gmatch("[%z\1-\127\194-\244][\128-\191]*") do result[#result + 1] = char end
 	return result
 end
-local russianMap, upperRussian, lowerRussian = {}, {}, {}
-for i = 2, 4 do
-	local en, ru = symbols(englishRows[i]), symbols(russianRows[i])
-	for j, char in ipairs(en) do russianMap[char] = ru[j] end
-end
-russianMap["`"] = "ё"
+local upperRussian, lowerRussian = {}, {}
 local lower, upper = symbols("абвгдеёжзийклмнопрстуфхцчшщъыьэюя"), symbols("АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ")
 for i, char in ipairs(lower) do
 	upperRussian[char] = upper[i]; lowerRussian[upper[i]] = char
@@ -69,7 +61,7 @@ end
 
 function CDMP.PresetNameKey(key)
 	-- The engine reports key identifiers, which can be uppercase regardless of Shift.
-	key = lowerRussian[key] or string.lower(key)
+	key = lowerRussian[key] or (upperRussian[key] and key) or string.lower(key)
 	if key == "backspace" then CDMP.BackspacePresetName(); return end
 	if key == "delete" then client.cdmpNameBuffer = ""; client.cdmpNameSelectAll = false; return end
 	if key == "capslock" then client.cdmpNameUpper = not client.cdmpNameUpper; return end
@@ -80,7 +72,6 @@ function CDMP.PresetNameKey(key)
 	end
 	local char = key
 	if #key ~= 1 and not upperRussian[key] then return end
-	if client.cdmpNameLanguage == "ru" then char = russianMap[key] or key end
 	if (client.cdmpNameUpper == true) ~= InputDown("shift") then char = uppercase(char) end
 	CDMP.AppendPresetName(char)
 end
@@ -93,13 +84,8 @@ local function drawRename(width)
 	local _, name = uiTextConstrained((client.cdmpNameBuffer or "") .. "|", "regular.ttf", FONT_SIZE_22, width - 20)
 	UiText(name); UiPop()
 	UiTranslate(0, 72)
-	UiPush(); UiTranslate(48, 0); UiAlign("center middle")
-	if uiDrawSecondaryButton(client.cdmpNameLanguage == "ru" and "RU" or "EN", 96) then
-		client.cdmpNameLanguage = client.cdmpNameLanguage == "ru" and "en" or "ru"
-	end
-	UiPop()
-	UiPush(); UiTranslate(112, 0); UiAlign("left middle"); UiFont("regular.ttf", FONT_SIZE_18)
-	local _, hint = uiTextConstrained(CDMP.Text("NAME_INPUT_HINT"), "regular.ttf", FONT_SIZE_18, width - 112)
+	UiPush(); UiAlign("left middle"); UiFont("regular.ttf", FONT_SIZE_18)
+	local _, hint = uiTextConstrained(CDMP.Text("NAME_INPUT_HINT"), "regular.ttf", FONT_SIZE_18, width)
 	UiText(hint); UiPop()
 	UiTranslate(0, 62)
 	local buttonWidth = (width - 12) / 2
