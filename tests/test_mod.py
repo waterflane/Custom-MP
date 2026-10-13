@@ -141,6 +141,38 @@ end
 '''
 
 
+GEOMETRY_MOCK = r'''
+-- Track layout rectangles, rather than mirroring widget spacing constants.
+local push, pop, nav, button = UiPush, UiPop, UiNavComponent, uiDrawSecondaryButton
+local transforms = {}
+local cursor = {x=0,y=0,horizontal='left',vertical='top'}
+uiCardRects, uiButtonRects, uiPanelRects = {}, {}, {}
+function UiPush()
+    push(); transforms[#transforms+1]={x=cursor.x,y=cursor.y,horizontal=cursor.horizontal,vertical=cursor.vertical}
+end
+function UiPop() pop(); cursor=table.remove(transforms) end
+function UiTranslate(x,y) cursor.x=cursor.x+x; cursor.y=cursor.y+y end
+function UiAlign(align)
+    for name in align:gmatch('%S+') do
+        if name == 'left' or name == 'center' or name == 'right' then cursor.horizontal=name
+        else cursor.vertical=name end
+    end
+end
+local function rectangle(w,h)
+    local x=cursor.x-(cursor.horizontal=='center' and w/2 or cursor.horizontal=='right' and w or 0)
+    local y=cursor.y-(cursor.vertical=='middle' and h/2 or cursor.vertical=='bottom' and h or 0)
+    return {left=x,top=y,right=x+w,bottom=y+h}
+end
+function UiNavComponent(w,h) uiCardRects[#uiCardRects+1]=rectangle(w,h); return nav(w,h) end
+function uiDrawPanel(w,h) uiPanelRects[#uiPanelRects+1]=rectangle(w,h) end
+function uiDrawSecondaryButton(label,w,disabled)
+    local rect=rectangle(w,40); rect.label=label; uiButtonRects[#uiButtonRects+1]=rect
+    return button(label,w,disabled)
+end
+uiDrawPrimaryButton=uiDrawSecondaryButton
+'''
+
+
 def stripped(path):
     return re.sub(r"^#(?:include|version).*?$", "", path.read_text(encoding="utf-8"), flags=re.M)
 
@@ -390,6 +422,36 @@ class ModTests(unittest.TestCase):
             uiClicks.CDMP_CONFIRM=true
             CDMP_DrawSetup()
             assert(CDMP.GetPresetName(2) == 'Мой пресет' and not client.cdmpModal and #uiStack == 0)
+        """)
+
+    def test_preset_cards_do_not_overlap_cancel_or_panel_edges(self):
+        self.check(UI_MOCK)
+        self.check(GEOMETRY_MOCK)
+        self.check("""
+            for _,height in ipairs({240,360,480,720,1080}) do
+                UiHeight=function() return height end
+                client.cdmpModal='list'; client.cdmpPresetPage=nil
+                local layout=CDMP.PresetListLayout(height)
+                local pages=math.ceil(CDMP.PRESET_COUNT/layout.rows)
+                local total=0
+                for page=1,pages do
+                    client.cdmpPresetPage=page
+                    uiCardRects,uiButtonRects,uiPanelRects={},{},{}
+                    CDMP_DrawPresetModal()
+                    local panel=uiPanelRects[1]
+                    local cancel=uiButtonRects[1]
+                    assert(cancel.label == 'CDMP_CANCEL' and panel.top >= 0 and panel.bottom <= height)
+                    assert(cancel.bottom <= panel.bottom-16)
+                    for i,card in ipairs(uiCardRects) do
+                        assert(card.top >= panel.top and card.bottom+16 <= cancel.top)
+                        assert(card.left >= panel.left and card.right <= panel.right)
+                        if i>1 then assert(uiCardRects[i-1].bottom < card.top) end
+                        total=total+1
+                    end
+                    assert(#uiStack == 0)
+                end
+                assert(total == 5)
+            end
         """)
 
     def test_physical_preset_name_input_case(self):

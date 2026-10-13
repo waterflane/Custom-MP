@@ -100,8 +100,11 @@ local function drawPresetChevron()
 	UiPop()
 end
 
-function CDMP.DrawPresetCard(slot, width, selected, selector)
-	local height = selector and 80 or 52
+function CDMP.DrawPresetCard(slot, width, selected, selector, rowHeight)
+	local height = selector and 80 or (rowHeight or 52)
+	local badgeSize = height < 44 and 24 or 32
+	local nameLeft = badgeSize + 26
+	local nameFont = height < 44 and FONT_SIZE_18 or FONT_SIZE_22
 	UiPush(); UiAlign("left top")
 	local navId = UiNavComponent(width, height)
 	navigationAddItem(navId)
@@ -115,17 +118,19 @@ function CDMP.DrawPresetCard(slot, width, selected, selector)
 	UiRoundedRect(width, height, 8)
 	UiColor(selected and COLOR_YELLOW or COLOR_WHITE)
 	if selected or hovered or focused then UiRoundedRectOutline(width, height, 8, 2) end
-	UiPush(); UiTranslate(12, (height - 32) / 2)
-	UiColor(1, 1, 1, 0.08); UiRoundedRect(32, 32, 6)
-	UiTranslate(16, 16); UiAlign("center middle"); UiFont("regular.ttf", FONT_SIZE_18)
+	UiPush(); UiTranslate(12, (height - badgeSize) / 2)
+	UiColor(1, 1, 1, 0.08); UiRoundedRect(badgeSize, badgeSize, 6)
+	UiTranslate(badgeSize / 2, badgeSize / 2); UiAlign("center middle"); UiFont("regular.ttf", FONT_SIZE_18)
 	UiColor(selected and COLOR_YELLOW or COLOR_WHITE); UiText(tostring(slot)); UiPop()
 	UiTextDisableWildcards(true)
 	local status = CDMP.Text(CDMP.PresetExists(slot) and "SAVED" or "EMPTY")
 	UiFont("regular.ttf", FONT_SIZE_18)
-	local nameWidth = selector and width - 100 or width - 80 - UiGetTextSize(status)
-	UiPush(); UiTranslate(58, selector and 26 or height / 2); UiAlign("left middle")
-	UiColor(COLOR_WHITE); UiFont("regular.ttf", FONT_SIZE_22)
-	local _, name = uiTextConstrained(CDMP.GetPresetName(slot), "regular.ttf", FONT_SIZE_22, nameWidth)
+	local statusWidth = math.min(UiGetTextSize(status), width * 0.35)
+	local _, statusLabel = uiTextConstrained(status, "regular.ttf", FONT_SIZE_18, statusWidth)
+	local nameWidth = selector and width - 100 or width - nameLeft - 28 - statusWidth
+	UiPush(); UiTranslate(nameLeft, selector and 26 or height / 2); UiAlign("left middle")
+	UiColor(COLOR_WHITE); UiFont("regular.ttf", nameFont)
+	local _, name = uiTextConstrained(CDMP.GetPresetName(slot), "regular.ttf", nameFont, nameWidth)
 	UiText(name)
 	if selector then
 		UiTranslate(0, 27); UiColor(0.65, 0.7, 0.72, 1); UiFont("regular.ttf", FONT_SIZE_18); UiText(status)
@@ -133,10 +138,19 @@ function CDMP.DrawPresetCard(slot, width, selected, selector)
 	UiPop(); UiPush(); UiTranslate(width - (selector and 32 or 16), height / 2)
 	UiColor(selected and COLOR_YELLOW or COLOR_WHITE)
 	if selector then drawPresetChevron()
-	else UiAlign("right middle"); UiFont("regular.ttf", FONT_SIZE_18); UiText(status) end
+	else UiAlign("right middle"); UiFont("regular.ttf", FONT_SIZE_18); UiText(statusLabel) end
 	UiPop(); UiPop()
 	if pressed then UiSound("ui/common/click.ogg") end
 	return pressed
+end
+
+function CDMP.PresetListLayout(viewHeight)
+	local height = math.min(448, viewHeight - 32)
+	local top = height < 400 and 58 or 80
+	local gap, footer = 6, 72 -- 40px button, 16px gap, 16px bottom padding
+	local rows = math.max(1, math.min(CDMP.PRESET_COUNT, math.floor((height - top - footer + gap) / 40)))
+	local rowHeight = math.min(52, math.floor((height - top - footer - gap * (rows - 1)) / rows))
+	return {height = height, top = top, rows = rows, rowHeight = rowHeight, gap = gap}
 end
 
 function CDMP_DrawPresetModal()
@@ -153,7 +167,8 @@ function CDMP_DrawPresetModal()
 		CDMP.PresetNameKey(key)
 	end
 	local width = math.min(700, UiWidth() - 40)
-	local height = modal == "rename" and 214 or 448
+	local layout = CDMP.PresetListLayout(UiHeight())
+	local height = modal == "rename" and 214 or layout.height
 	navigationBeginGroup(modal == "rename" and "cdmpRename" or "cdmpPresetList", true)
 	UiMakeInteractive(); UiPush()
 	UiAlign("left top"); UiColor(0, 0, 0, 0.65); UiRect(UiWidth(), UiHeight())
@@ -161,18 +176,31 @@ function CDMP_DrawPresetModal()
 	UiColor(COLOR_WHITE); uiDrawPanel(width, height, 16)
 	UiTranslate(24, 22); UiFont(FONT_BOLD, FONT_SIZE_30)
 	UiText(CDMP.Text(modal == "rename" and "RENAME" or "PRESETS"))
-	UiTranslate(0, 58)
+	UiTranslate(0, (modal == "rename" and 80 or layout.top) - 22)
 	-- Names are literal text, not localization keys or inline image markup.
 	UiTextDisableWildcards(true)
 	if modal == "rename" then drawRename(width - 48)
 	else
 		local content = width - 48
-		for slot = 1, CDMP.PRESET_COUNT do
-			if CDMP.DrawPresetCard(slot, content, slot == (client.cdmpSelectedPreset or 1), false) then CDMP.SelectPreset(slot) end
-			UiTranslate(0, 58)
+		local pages = math.ceil(CDMP.PRESET_COUNT / layout.rows)
+		client.cdmpPresetPage = math.floor(CDMP.Clamp(client.cdmpPresetPage or math.ceil((client.cdmpSelectedPreset or 1) / layout.rows), 1, pages))
+		local first = (client.cdmpPresetPage - 1) * layout.rows + 1
+		for slot = first, math.min(CDMP.PRESET_COUNT, first + layout.rows - 1) do
+			UiPush(); UiTranslate(0, (slot - first) * (layout.rowHeight + layout.gap))
+			if CDMP.DrawPresetCard(slot, content, slot == (client.cdmpSelectedPreset or 1), false, layout.rowHeight) then CDMP.SelectPreset(slot) end
+			UiPop()
 		end
-		UiPush(); UiTranslate(content / 2, 4); UiAlign("center middle")
-		if uiDrawSecondaryButton(CDMP.Text("CANCEL"), content) then CDMP.ClosePresetModal() end
+		-- The footer is anchored to the panel, independently of card count/height.
+		UiPush(); UiTranslate(content / 2, height - layout.top - 36); UiAlign("center middle")
+		local cancelWidth = pages > 1 and content - 144 or content
+		if uiDrawSecondaryButton(CDMP.Text("CANCEL"), cancelWidth) then CDMP.ClosePresetModal() end
+		if pages > 1 then
+			UiPush(); UiTranslate(-content / 2 + 26, 0)
+			if uiDrawSecondaryButton("<", 52, client.cdmpPresetPage == 1) then client.cdmpPresetPage = client.cdmpPresetPage - 1 end
+			UiPop(); UiPush(); UiTranslate(content / 2 - 26, 0)
+			if uiDrawSecondaryButton(">", 52, client.cdmpPresetPage == pages) then client.cdmpPresetPage = client.cdmpPresetPage + 1 end
+			UiPop()
+		end
 		UiPop()
 	end
 	UiPop(); navigationEndGroup()
