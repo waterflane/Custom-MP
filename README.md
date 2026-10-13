@@ -68,7 +68,7 @@ python tests\test_mod.py
 
 The suite covers Lua 5.1 syntax, include graphs, resources, mode initialization, host-only/one-time settings application, validation, empty pools/loadouts, five preset slots, overwrite/delete, persistence across mocked runtime restarts, cross-mode loading, missing tools, optional combat effects and setup UI interactions/pagination. It uses a mocked engine API; it does not prove game rendering or networking behavior.
 
-See `tests/MANUAL_TESTS.md` for the remaining in-game acceptance checks. Two-player networking, real engine persistence, visual layout and controller navigation have **not been verified in a live Teardown session**.
+Two-player networking, real engine persistence, visual layout and controller navigation have **not been verified in a live Teardown session**.
 
 ## License
 
