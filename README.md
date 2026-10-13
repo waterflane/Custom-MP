@@ -1,79 +1,213 @@
 # Custom MP
 
-Vanilla DM, TDM and CTF with configurable loadouts, loot, HUD and five shared presets.
+A Teardown multiplayer mod with **Deathmatch**, **Team Deathmatch** and **Capture the Flag**, configurable loadouts, weighted loot and five shared presets.
 
-| Mode | Identifier | Default match time | Respawn delay |
-| --- | --- | --- | --- |
-| Deathmatch | `customdeathmatchmp` | 5 minutes | 10 seconds |
-| Team Deathmatch | `customteamdeathmatchmp` | 5 minutes | 10 seconds |
-| Capture the Flag | `customcapturetheflagmp` | 8 minutes | 3 seconds |
+Built on the official Multiplayer Classics scripts, with host-selected match settings and optional combat feedback.
 
-The mode scripts, spawn algorithms, teams, spectator cameras, scoring, objectives, countdown and results are based on the official `mods/mpclassics` files. CTF includes its flag/base prefabs, models, icons and sounds. Treasure Thieves and Sandbox are not included.
+[Download](#download) · [Features](#features) · [Game Modes](#game-modes) · [Installation](#installation) · [Configuration](#configuration) · [Presets](#presets) · [How It Works](#how-it-works)
 
-## Host settings
+---
 
-Before starting the match, open **Game mode settings**. The panel uses Teardown's Multiplayer Classics UI and navigation helpers, with English and Russian text. Other languages use English for the added settings.
+> [!IMPORTANT]
+> The host configures the match before pressing **Start**. The selected rules apply to every participant and remain fixed during the match.
 
-- **Match:** choose preset durations (3, 5, 8, 10, 15, 20 or 30 minutes) or a custom time slider from 0 to 6 hours, in one-minute steps. The lowest value is labelled Unlimited. Headshot multiplier keeps its existing selector.
-- **Tools:** numbered cards show tool names and current loadout/loot status. Card rows and pagination reserve space for the footer; opening a tool shows its controls, and Back returns to the same list page. Enable each starting tool, set starting ammo (0–100), allow it in loot, set its relative loot weight (0–10) and pickup ammo (0–100). These three numeric values use integer sliders with visible values and mouse/keyboard/gamepad control.
-- **HUD:** player names, hit markers, kill markers and damage numbers. These are host-selected settings for all players; objective markers remain visible when player names are disabled.
-- **Presets:** five shared slots in a card list showing names and saved/empty status. The list reserves space for Cancel, uses smaller rows in short windows and pages when needed. The selected card opens the list; Save/overwrite is the primary action, beside Load, with Rename and Clear settings below.
+## Download
 
-Settings are applied together when the host presses **Start** and cannot be changed during the match. Team modes retain the official team selection/countdown. Settings reset to the mode's defaults when a new game is created; use a preset to reuse a configuration.
+| Platform | Link |
+| --- | --- |
+| Steam Workshop | [Open the Workshop item](https://steamcommunity.com/sharedfiles/filedetails/?id=3819124313) |
+| GitHub | [Browse the source](https://github.com/waterflane/Custom-MP) · [Download main as ZIP](https://github.com/waterflane/Custom-MP/archive/refs/heads/main.zip) |
 
-Vanilla starting equipment is a gun with 7 rounds, sledge, spraycan and extinguisher, with the gun selected. Headshot multiplier defaults to 1.0; extra combat overlays default to off. Existing saved settings from earlier versions do not enable them automatically.
+> [!NOTE]
+> This README describes the current source version. Updates to the Workshop build are published separately.
 
-The loot pool uses configurable tool weights and the same pool at all official low/medium/high spawn points. Official spawn-point generation, interaction pickup, weapon drops and 20-second crate respawn remain in use. A zero weight excludes a tool; an entirely empty pool produces no crates. Starting with no tools is supported. Pickup ammo of zero is preserved.
+## Features
 
-Active vanilla and Workshop tools come from `game.tool`. Custom tools start disabled and with zero loot weight until configured. Internal CTF flag tools never appear in the settings or loot pool.
+| Feature | Behavior |
+| --- | --- |
+| Three classic modes | Official Deathmatch, Team Deathmatch and Capture the Flag gameplay with shared configuration |
+| Starting equipment | Enable each tool and choose its starting ammo |
+| Weighted loot | Choose eligible tools, relative spawn weights and pickup ammo |
+| Match duration | Preset durations, custom time up to six hours, or an unlimited match |
+| Headshot damage | Choose a preset multiplier from 1.0× to 3.0× |
+| Combat feedback | Optional hit markers, kill markers and floating damage numbers |
+| Player names | Toggle names while keeping CTF flags and objective markers visible |
+| Five shared presets | Save, load, rename and clear slots across all three modes and maps |
+| Workshop tools | Configure active mod tools registered in `game.tool` |
+| Setup menu | Tool/preset cards, integer sliders, pages and mouse/keyboard/gamepad navigation |
+| Localization | English and Russian settings; other languages use English for added text |
 
-Unlimited matches show elapsed time with ∞ and do not end by timer. Finite matches retain the official countdown/results behavior. Presets store both time choices and the selected mode; older presets without time-mode fields load as preset durations. Custom durations above six hours are capped when applied, without changing the saved slot.
+## Game Modes
 
-## Presets / Пресеты
+| Mode | Default match time | Respawn delay |
+| --- | --- | --- |
+| Deathmatch | 5 minutes | 10 seconds |
+| Team Deathmatch | 5 minutes | 10 seconds |
+| Capture the Flag | 8 minutes | 3 seconds |
 
-The five slots are initially empty and belong to the local host. They are shared across these three modes and all maps, and persist across game restarts through `savegame.mod.cdmp.presets`. The storage implementation is in `scripts/shared/presets.lua`; the game writes its own mod save data, rather than modifying a Lua source file.
-
-Save writes all current settings into the selected slot; saving again replaces that slot. Load fills the setup screen without starting a match. Clear settings empties the slot without changing the current draft or its name. Rename works for empty and saved slots, accepts up to 32 characters and uses physical keyboard input with Shift/Caps Lock, Backspace and Ctrl+A. There is no on-screen keyboard or layout selector. Presets do not contain a map, teams, scores or match state. Preset actions show stacked notifications at the bottom left, independently of the settings window; each fades out within five seconds.
-
-Missing Workshop tools are skipped with a message. Loading never changes the saved slot, so those tools remain in the preset if they become available again. Explicitly overwriting the slot saves only the currently available tool configuration.
-
-**Русский:** перед началом матча хост открывает «Настройки режима» → «Пресеты». Доступны пять общих пустых слотов. «Сохранить / перезаписать» записывает текущие настройки, «Загрузить» заполняет меню, «Очистить настройки» очищает конфиг выбранного слота, сохраняя его имя. Слоты выбираются из выпадающего списка; их можно переименовать. Для применения загруженных настроек нужно запустить матч. Пресеты сохраняются после перезапуска игры и доступны в DM, TDM и CTF на любой карте.
-
-Preset storage on Windows is part of `%LOCALAPPDATA%\Teardown\savegame.xml`, under the mod's own entry in `savegame.mod`. For this local folder the entry is normally `local-custom-mp`; copying only the mod's Lua files does not copy presets. Renaming the folder or switching to the Workshop version changes the mod identity and may open a different save entry.
-
-**Перенос только пресетов:**
-
-1. Закройте Teardown на обоих компьютерах и сделайте резервные копии их `savegame.xml`.
-2. На исходном компьютере найдите запись мода (`local-custom-mp` для папки `Custom MP`) внутри `<savegame><mod>`, затем её `<cdmp><presets>`. Скопируйте целиком блок `<presets>...</presets>`: в нём все пять слотов, имена и версии формата.
-3. На другом компьютере установите мод, один раз сохраните любой пресет и закройте игру, чтобы создать запись назначения. В текстовом редакторе замените только её блок `<presets>` скопированным. Для другого имени папки или Workshop используйте запись назначения, а не исходный идентификатор мода. Остальные данные сохранения не меняйте.
-4. Запустите игру и загрузите нужный слот. Для Workshop-инструментов нужны те же активные моды; отсутствующие инструменты пропускаются.
-
-Отдельного файла экспорта пресетов пока нет. Для переноса всего игрового сохранения можно копировать весь `savegame.xml`, но тогда переносятся также прогресс и настройки других модов.
+The official teams, spawn protection, scoring, victory checks, spectating, countdown and results remain the foundation of each mode. CTF includes the official flag/base prefabs, models, icons and sounds, including flag pickup, carrying, drops, returns and captures.
 
 ## Installation
 
-Place this mod's folder under `Documents/Teardown/mods/` and enable **Custom MP**. The existing game-mode identifiers are retained. Do not commit `id.txt`; it links the local folder to a Steam Workshop item.
+### Steam Workshop
 
-## Testing from the editor / Тестирование из редактора
+1. Subscribe to the [Workshop item](https://steamcommunity.com/sharedfiles/filedetails/?id=3819124313).
+2. Enable **Custom MP** in Teardown's Mod Manager.
+3. Start a multiplayer session and open the game modes menu.
+4. Select **Custom MP: Deathmatch**, **Custom MP: Team Deathmatch** or **Custom MP: Capture the Flag**.
+5. The host opens **Game mode settings**, chooses the configuration and presses **Start**.
 
-This is a global game-mode mod, not a map: there is no root `main.xml` to open. The editor's Open/Save level dialogs list level files/folders, not the registered game modes. Open a separate test map in the editor instead.
+### Local source
 
-1. Enable **Custom MP** in the Mod Manager's local mods list, then reopen the editor/game if necessary to refresh metadata.
-2. Open a map made for version 2 (`version = 2` in that map's `info.txt`). Press **F5** to play it.
-3. Open **Esc → Game Modes / Игровые режимы** and select **Custom MP: Deathmatch**, **Custom MP: Team Deathmatch** or **Custom MP: Capture the Flag**. Then set up the match as host and press Start. **F4** returns to the editor.
-4. For a local two/four-player test, select a local version-2 map in the Mod Manager and press **Play / Играть**. The play-options dialog includes the active mod's game modes and a **Number of Players / Количество игроков** choice for 1, 2 or 4 local players.
+1. Download or clone the repository.
+2. Place the mod in `Documents/Teardown/mods/Custom MP/`, with `info.txt` directly inside that folder.
+3. Enable **Custom MP** under the Mod Manager's local mods.
+4. Launch a compatible map and select one of the Custom MP modes.
 
-`info.txt` must use `version = 2`: this is the engine's mod format, not the mod's release number (`CDMP.VERSION`). Real online sessions require published Workshop mods; use local testing during development.
+Custom MP is a global game-mode mod. It does not contain a playable root `main.xml`; open a separate map when using the editor.
 
-**Русский:** включите локальный мод Custom MP, откройте в редакторе другую карту версии 2, запустите её через F5 и выберите режим через Esc → «Игровые режимы». Custom MP не содержит карты, поэтому искать его как уровень в File → Open не нужно. Для проверки с несколькими локальными игроками запускайте карту кнопкой «Играть» в менеджере модов и выбирайте количество игроков.
+## Configuration
 
-Input hints use current keyboard bindings from the public settings registry and retain gamepad glyphs.
+All player-facing configuration is available in the host's setup menu; editing Lua files is not required.
 
-## Development and validation
+| Setting | Options |
+| --- | --- |
+| Time mode | Preset durations or custom time; switching keeps both choices |
+| Preset duration | 3, 5, 8, 10, 15, 20 or 30 minutes |
+| Custom duration | 0–6 hours, in one-minute steps; **0 means Unlimited** |
+| Starting tool | Enabled or disabled for each tool |
+| Starting ammo | Integer slider, 0–100 |
+| Allowed in loot | Enabled or disabled for each tool |
+| Loot weight | Integer slider, 0–10; **0 excludes the tool** |
+| Pickup ammo | Integer slider, 0–100 |
+| Headshot multiplier | 1.0, 1.15, 1.25, 1.3, 1.5, 2.0, 2.5 or 3.0 |
+| HUD | Player names, hit markers, kill markers and damage numbers |
 
-Entry points are `cdmp.lua`, `teamdeathmatch.lua` and `capturetheflag.lua`. Each includes `scripts/shared/custom.lua`, which connects shared configuration, presets, server settings and optional combat feedback. The official `dm_spawn.lua` and `tdm_spawn.lua` remain separate; CTF uses `mplib/spawn.lua`.
+### Defaults
 
-Run the automated checks with Python, `lupa` (including its Lua 5.1 runtime), and the installed game files:
+The default loadout is the vanilla gun with **7 rounds**, sledge, spraycan and extinguisher, with the gun selected. Headshot damage defaults to **1.0×**. Extra hit/kill markers and damage numbers start **off**; player names follow the vanilla rules.
+
+Custom tools start disabled and with zero loot weight until configured. Reset restores the current mode's defaults. A new game starts with defaults; use a saved preset to reuse your changes.
+
+### Match timer
+
+Finite matches keep the official countdown and results behavior. Unlimited matches show **elapsed time with ∞**, skip end-of-timer warnings and do not end because of the timer.
+
+Older presets without time-mode fields use preset durations. A saved custom duration above six hours is capped when applied; loading does not rewrite the saved slot.
+
+### Tool cards and sliders
+
+The tool list shows each tool's name and its current loadout/loot status. Open a card to edit its settings. **Back to tools** returns to the same list page.
+
+Drag numeric sliders with the mouse, or use left/right inputs while the slider has keyboard/gamepad focus. All three tool sliders use integer steps and show the current value. Long lists reserve space for page controls and the lower buttons.
+
+## Presets
+
+Five initially empty slots belong to the local host. They are shared across **DM, TDM and CTF** and all maps.
+
+| Action | Result |
+| --- | --- |
+| Select a slot | Changes the selected slot without loading it |
+| Save / overwrite | Writes the entire current configuration to the selected slot; keeps its name |
+| Load | Fills the setup menu without starting the match |
+| Rename | Sets a name of up to 32 characters, including for empty slots; an empty name restores the default |
+| Clear settings | Clears the saved configuration; keeps the name and current setup |
+
+Names are edited with the physical keyboard, with Shift/Caps Lock, Backspace and Ctrl+A. Preset actions show separate notifications at the bottom left; they fade out within five seconds even after closing the settings window.
+
+A preset includes duration choices, tools, ammo, loot parameters, headshots and HUD options. Maps, teams, scores and live match state are not saved in a preset.
+
+Missing Workshop tools are skipped with a notice. Their stored data remains in the slot and can be used when those tools are available again. Explicitly overwriting the slot saves the currently available tool configuration.
+
+### Storage
+
+Presets use `savegame.mod.cdmp.presets`, with a versioned format. On Windows, the game stores mod data in:
+
+```text
+%LOCALAPPDATA%\Teardown\savegame.xml
+```
+
+The local folder `Custom MP` normally uses the mod entry `local-custom-mp`. Renaming that folder or switching to the Workshop build changes the mod identity and can open a different save entry. Copying the Lua files alone does not copy presets.
+
+> [!NOTE]
+> Editor preview runs have been observed to lose presets between test launches. Check persistence through normal game launches; real engine persistence has not yet been verified in a controlled live session.
+
+<details>
+<summary>Transfer presets to another computer or mod identity</summary>
+
+1. Close Teardown on both computers and back up their `savegame.xml` files.
+2. In the source file, find the mod's entry inside `<savegame><mod>`, then its `<cdmp><presets>` section.
+3. Copy the complete `<presets>...</presets>` block, including all five slots, names and format versions.
+4. At the destination, install the mod, save one preset and close the game to create its save entry.
+5. In a text editor, replace only that entry's `<presets>` block. For a different folder name or Workshop build, use the destination mod's entry rather than copying the source mod identifier.
+6. Start the game and load the desired slot. Enable the same Workshop tool mods if their tools are needed.
+
+There is no separate preset export file. Copying the entire `savegame.xml` also transfers game progress and other mods' data.
+
+</details>
+
+## How It Works
+
+Each mode uses the official Multiplayer Classics lifecycle with a shared Custom MP configuration adapter.
+
+The host sends one structured settings request when pressing **Start**. The server checks the host, setup state, available tools and numeric ranges, then applies the configuration and begins the official start sequence. Settings become fixed for the match.
+
+### Loot
+
+A single weighted pool is used at the official low, medium and high loot spawn groups. Official spawn-point generation, pickup, death drops and **20-second crate respawns** remain in place.
+
+A zero weight excludes a tool. An empty pool produces no crates. An empty starting loadout and zero pickup ammo are supported. Internal CTF flag tools are excluded from configuration and loot.
+
+### HUD and combat
+
+The headshot multiplier and optional feedback are shared match settings. Hiding player names keeps CTF objectives and flag markers visible. Input hints read current keyboard bindings and retain gamepad glyphs.
+
+## Example Setup
+
+To create a gun-only match:
+
+1. Choose **Deathmatch**, then a preset duration or custom time.
+2. Enable only the gun in the starting loadout and set its ammo.
+3. Allow only the gun in loot, give it a nonzero weight and choose its pickup ammo.
+4. Keep headshot damage at 1.0×, or choose another multiplier; enable the HUD effects you want.
+5. Save the configuration in a preset, rename it, then press **Start**.
+
+These are settings to create yourself; the five preset slots are initially empty.
+
+## Local Editor Testing
+
+1. Enable the local mod and open a separate version-2 map in the editor.
+2. Press **F5** to play, then select a Custom MP mode through **Esc → Game Modes**. **F4** returns to the editor.
+3. For two/four-player local testing, select a local version-2 map in the Mod Manager and press **Play**. Its play-options dialog offers the active game modes and a **Number of Players** choice.
+
+`info.txt` uses `version = 2`, the engine's mod format. This is separate from the internal `CDMP.VERSION`. Online sessions use the published Workshop build; local files are used for development tests.
+
+## Project Structure
+
+```text
+Custom MP/
+├── gamemodes.txt              # Mode registration and previews
+├── cdmp.lua                   # Deathmatch
+├── teamdeathmatch.lua         # Team Deathmatch
+├── capturetheflag.lua         # Capture the Flag
+├── dm_spawn.lua / tdm_spawn.lua
+├── mplib/                     # Multiplayer helpers
+├── scripts/
+│   ├── shared/                # Configuration, tool catalog and presets
+│   ├── server/                # Settings validation and combat integration
+│   └── client/                # Setup menu, cards, sliders, notices and HUD
+├── data/texts/                # Localized strings
+├── prefab/ / vox/ / gfx/ / snd/
+└── tests/test_mod.py           # Automated Lua 5.1 checks
+```
+
+Mode identifiers remain `customdeathmatchmp`, `customteamdeathmatchmp` and `customcapturetheflagmp`. The shared entry include is `scripts/shared/custom.lua`; preset storage lives in `scripts/shared/presets.lua`. Deathmatch and TDM retain their official spawn scripts; CTF uses `mplib/spawn.lua`.
+
+## Development and Validation
+
+The mod runs directly from its source folder; no build step is required.
+
+Install Python and `lupa` with its Lua 5.1 runtime, and point the checks at your Teardown installation:
 
 ```powershell
 python -m pip install --target "$env:TEMP\cdmp-lua-tests" lupa
@@ -81,10 +215,25 @@ $env:TEARDOWN_PATH = 'D:\SteamLibrary\steamapps\common\Teardown'
 python tests\test_mod.py
 ```
 
-The suite covers Lua 5.1 syntax, include graphs, resources, mode initialization, host-only/one-time settings application, validation, empty pools/loadouts, five preset slots, overwrite/delete, persistence across mocked runtime restarts, cross-mode loading, missing tools, optional combat effects and setup UI interactions/pagination. It uses a mocked engine API; it does not prove game rendering or networking behavior.
+Automated checks cover Lua syntax, includes, assets, mode initialization, host-only settings application, value validation, empty loot/loadouts, preset operations, missing tools, optional combat effects, sliders, menu geometry and pagination. Persistence is checked across mocked runtime restarts.
 
-Two-player networking, real engine persistence, visual layout and controller navigation have **not been verified in a live Teardown session**.
+> [!NOTE]
+> The mocked API does not prove live rendering, networking, controller navigation or engine save persistence. Those checks have not been completed in a controlled Teardown session.
+
+Local Workshop state, including `id.txt` and `steam_description.txt`, is excluded from Git. `id.txt` links a local folder to a Workshop item.
+
+## Bug Reports
+
+Report issues through [GitHub Issues](https://github.com/waterflane/Custom-MP/issues). Include the selected mode, map, tool mods, relevant settings, reproduction steps and a screenshot or relevant Lua error when available. For editor issues, mention whether the launch was single-player or a two/four-player test.
+
+## Credits and Support
+
+- **WaterFlane** — Custom MP.
+- **Tuxedo Labs** — official Multiplayer Classics scripts and assets.
+- **Exorsky (babon)** — headshot multiplier idea.
+
+Support development on [Patreon](https://patreon.com/waterflane_dev).
 
 ## License
 
-This project is licensed under GNU GPL v3.0; see LICENSE. The included Multiplayer Classics scripts and assets originate from the installed official Teardown mod. Changes to official gameplay code are limited to the configuration/feedback integration and correcting the CTF cleanup typo `falg2` to `flag2`.
+Project code is distributed under [GNU GPL v3.0](LICENSE). Included Multiplayer Classics scripts and assets originate from the installed official Teardown mod. Gameplay integration is limited to configuration, loot and optional feedback, plus the CTF cleanup typo fix from `falg2` to `flag2`.
