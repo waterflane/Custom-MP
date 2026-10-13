@@ -110,35 +110,32 @@ local function drawTools(width, rowHeight, rows)
 end
 
 local function drawPresets(width, rowHeight, rows)
-	local options = {}
-	for i = 1, CDMP.PRESET_COUNT do options[#options + 1] = option(CDMP.Text("PRESET") .. " " .. i, i) end
-	ensureStepperValue(prefix .. "slot", options, 1)
-	local slot = math.floor(CDMP.Clamp(readNumber(prefix .. "slot", 1), 1, CDMP.PRESET_COUNT))
+	local slot = client.cdmpSelectedPreset or 1
 	local exists = CDMP.PresetExists(slot)
-	local pages = math.max(1, math.ceil(5 / rows))
+	local pages = math.max(1, math.ceil(6 / rows))
 	client.cdmpPage = math.floor(CDMP.Clamp(client.cdmpPage or 1, 1, pages))
 	local first = (client.cdmpPage - 1) * rows + 1
-	for index = first, math.min(5, first + rows - 1) do
-		UiPush()
+	for index = first, math.min(6, first + rows - 1) do
+		UiPush(); UiTranslate(width / 2, 0); UiAlign("center middle")
 		if index == 1 then
-			UiAlign("left middle")
-			_drawSettingsItemStepper(prefix .. "slot", CDMP.Text("PRESET"), "", options, width, false)
-		else
-			UiTranslate(width / 2, 0); UiAlign("center middle")
-			if index == 2 then
-				UiFont(FONT_BOLD, FONT_SIZE_22); UiText(CDMP.Text(exists and "SAVED" or "EMPTY"))
-			elseif index == 3 and uiDrawSecondaryButton(CDMP.Text("SAVE"), width) then
-				CDMP.SavePreset(slot, CDMP_ReadDraft()); client.cdmpNotice = CDMP.Text("PRESET_SAVED")
-			elseif index == 4 and uiDrawSecondaryButton(CDMP.Text("LOAD"), width, not exists) then
-				local saved = CDMP.LoadPreset(slot)
-				if saved then
-					local draft, missing = CDMP.PreparePreset(saved, shared.cdmp.mode, shared.cdmp.tools)
-					CDMP_SetDraft(draft)
-					client.cdmpNotice = #missing > 0 and (CDMP.Text("MISSING_TOOLS") .. " " .. table.concat(missing, ", ")) or CDMP.Text("PRESET_LOADED")
-				end
-			elseif index == 5 and uiDrawSecondaryButton(CDMP.Text("DELETE"), width, not exists) then
-				CDMP.DeletePreset(slot); client.cdmpNotice = CDMP.Text("PRESET_DELETED")
+			local _, name = uiTextConstrained(CDMP.GetPresetName(slot), FONT_MEDIUM, FONT_SIZE_22, width - 70)
+			UiTextDisableWildcards(true)
+			if uiDrawSecondaryButton(slot .. ". " .. name .. " ▾", width) then client.cdmpModal = "list" end
+		elseif index == 2 then
+			UiFont(FONT_BOLD, FONT_SIZE_22); UiText(CDMP.Text(exists and "SAVED" or "EMPTY"))
+		elseif index == 3 and uiDrawSecondaryButton(CDMP.Text("SAVE"), width) then
+			CDMP.SavePreset(slot, CDMP_ReadDraft()); client.cdmpNotice = CDMP.Text("PRESET_SAVED")
+		elseif index == 4 and uiDrawSecondaryButton(CDMP.Text("LOAD"), width, not exists) then
+			local saved = CDMP.LoadPreset(slot)
+			if saved then
+				local draft, missing = CDMP.PreparePreset(saved, shared.cdmp.mode, shared.cdmp.tools)
+				CDMP_SetDraft(draft)
+				client.cdmpNotice = #missing > 0 and (CDMP.Text("MISSING_TOOLS") .. " " .. table.concat(missing, ", ")) or CDMP.Text("PRESET_LOADED")
 			end
+		elseif index == 5 and uiDrawSecondaryButton(CDMP.Text("RENAME"), width) then
+			CDMP.OpenPresetRename(slot)
+		elseif index == 6 and uiDrawSecondaryButton(CDMP.Text("DELETE"), width, not exists) then
+			CDMP.DeletePreset(slot); client.cdmpNotice = CDMP.Text("PRESET_DELETED")
 		end
 		UiPop(); UiTranslate(0, rowHeight)
 	end
@@ -150,7 +147,8 @@ local function drawSettingsPanel()
 	local contentWidth, rowHeight = width - 60, 48
 	local rows = math.max(1, math.floor((height - 290) / rowHeight))
 	local section = client.cdmpSection or 1
-	navigationBeginGroup("cdmpSettings", true)
+	navigationBeginGroup("cdmpSettings", not client.cdmpModal, client.cdmpModal ~= nil)
+	if client.cdmpModal then UiDisableInput() end
 	UiMakeInteractive(); UiPush(); UiTranslate(30, 20); UiAlign("left top")
 	uiDrawPanel(width, height, 16)
 	UiTranslate(30, 34); UiColor(COLOR_WHITE); UiFont(FONT_BOLD, FONT_SIZE_30); UiText(CDMP.Text("SETTINGS"))
@@ -221,6 +219,7 @@ function CDMP_DrawSetup()
 	end
 	UiPop(); navigationEndGroup()
 	if client.cdmpSettingsVisible then drawSettingsPanel() end
+	CDMP_DrawPresetModal()
 end
 
 function CDMP_DrawCombat()

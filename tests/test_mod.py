@@ -97,6 +97,12 @@ function UiFont() end
 function UiText() end
 function UiRect() end
 function UiMakeInteractive() end
+function UiRoundedRectOutline() end
+function UiTextDisableWildcards() end
+function InputPressed() return false end
+function InputDown() return false end
+function InputClear() end
+function InputLastPressedKey() return "" end
 function uiDrawPanel() end
 function uiDrawTextPanel() end
 function uiTextConstrained(text) return true,text end
@@ -147,7 +153,7 @@ class ModTests(unittest.TestCase):
         for filename in (
             "shared/config.lua", "shared/world.lua", "shared/presets.lua",
             "server/settings.lua", "server/combat.lua", "client/gui.lua",
-            "client/gui_settings.lua", "client/gui_combat.lua",
+            "client/gui_widgets.lua", "client/gui_settings.lua", "client/gui_combat.lua",
         ):
             self.lua.execute(stripped(ROOT / "scripts" / filename))
         self.lua.execute('CDMP_ServerInit("dm", {{Transform()}, {Transform()}, {Transform()}})')
@@ -207,14 +213,14 @@ class ModTests(unittest.TestCase):
         ''')
 
     def test_persistence_across_runtime_restart(self):
-        self.check('CDMP.SavePreset(3, shared.cdmp.settings)')
+        self.check("CDMP.RenamePreset(3, 'Saved name'); CDMP.SavePreset(3, shared.cdmp.settings)")
         data = dict(self.lua.globals().registry.items())
         other = LuaRuntime()
         other.execute(MOCK)
         other.globals().registry = other.table_from(data)
         for filename in ("config.lua", "presets.lua"):
             other.execute(stripped(ROOT / "scripts/shared" / filename))
-        other.execute('assert(CDMP.LoadPreset(3).tools.gun.ammo == 7)')
+        other.execute("assert(CDMP.LoadPreset(3).tools.gun.ammo == 7 and CDMP.GetPresetName(3) == 'Saved name')")
 
     def test_missing_tools_do_not_change_saved_slot(self):
         self.check('''
@@ -317,6 +323,47 @@ class ModTests(unittest.TestCase):
             for page=1,2 do client.cdmpPage=page; CDMP_DrawSetup() end
             assert(#uiStack == 0 and client.cdmpPage == 2)
         ''')
+
+    def test_preset_names_survive_save_clear_and_reload(self):
+        self.check("""
+            assert(CDMP.RenamePreset(1,'  Снайперы  '))
+            assert(CDMP.GetPresetName(1) == 'Снайперы' and not CDMP.PresetExists(1))
+            CDMP.SavePreset(1,shared.cdmp.settings)
+            CDMP.DeletePreset(1)
+            assert(CDMP.GetPresetName(1) == 'Снайперы' and not CDMP.PresetExists(1))
+            CDMP.SavePreset(1,shared.cdmp.settings)
+            assert(CDMP.GetPresetName(1) == 'Снайперы')
+            CDMP.RenamePreset(2,'Снайперы')
+            assert(CDMP.GetPresetName(2) == CDMP.GetPresetName(1))
+            CDMP.RenamePreset(3,string.rep('я',40))
+            assert(CDMP.GetPresetName(3) == string.rep('я',32))
+            CDMP.RenamePreset(3,'  ')
+            assert(CDMP.GetPresetName(3) == 'CDMP_PRESET 3')
+            assert(not CDMP.RenamePreset(6,'bad'))
+        """)
+
+    def test_preset_dropdown_rename_confirm_and_cancel(self):
+        self.check(UI_MOCK)
+        self.check("""
+            client.cdmpSettingsVisible=true; client.cdmpSection=4
+            CDMP_DrawSetup()
+            client.cdmpModal='list'
+            uiClicks['2. CDMP_PRESET 2 — CDMP_EMPTY']=true
+            CDMP_DrawSetup()
+            assert(client.cdmpSelectedPreset == 2 and not client.cdmpModal and not calls.rpc)
+            CDMP.OpenPresetRename(2)
+            client.cdmpNameLanguage='ru'
+            CDMP.PresetNameKey('q'); CDMP.PresetNameKey('w')
+            assert(client.cdmpNameBuffer == 'йц')
+            CDMP.BackspacePresetName()
+            assert(client.cdmpNameBuffer == 'й')
+            CDMP.ClosePresetModal()
+            assert(CDMP.GetPresetName(2) == 'CDMP_PRESET 2')
+            CDMP.OpenPresetRename(2); client.cdmpNameBuffer='Мой пресет'; client.cdmpNameSelectAll=false
+            uiClicks.CDMP_CONFIRM=true
+            CDMP_DrawSetup()
+            assert(CDMP.GetPresetName(2) == 'Мой пресет' and not client.cdmpModal and #uiStack == 0)
+        """)
 
     def test_combat_defaults_and_optional_feedback(self):
         self.check('''

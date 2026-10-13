@@ -12,6 +12,32 @@ local function slotKey(slot)
 	return CDMP.PRESET_PREFIX .. tostring(slot)
 end
 
+function CDMP.NormalizePresetName(name)
+	name = tostring(name or ""):gsub("[%z\1-\31\127]", ""):match("^%s*(.-)%s*$")
+	local chars = {}
+	for char in name:gmatch("[%z\1-\127\194-\244][\128-\191]*") do
+		if #chars == 32 then break end
+		chars[#chars + 1] = char
+	end
+	return table.concat(chars)
+end
+
+function CDMP.GetPresetName(slot)
+	local prefix = slotKey(slot)
+	if not prefix then return "" end
+	local name = GetString(prefix .. ".name")
+	if name ~= "" then return name end
+	return GetTranslatedStringByKey("CDMP_PRESET") .. " " .. tostring(slot)
+end
+
+function CDMP.RenamePreset(slot, name)
+	local prefix = slotKey(slot)
+	if not prefix then return false end
+	name = CDMP.NormalizePresetName(name)
+	if name == "" then ClearKey(prefix .. ".name") else SetString(prefix .. ".name", name) end
+	return true
+end
+
 function CDMP.PresetExists(slot)
 	local prefix = slotKey(slot)
 	return prefix ~= nil and GetInt(prefix .. ".version") == CDMP.PRESET_VERSION
@@ -20,7 +46,9 @@ end
 function CDMP.SavePreset(slot, settings)
 	local prefix = slotKey(slot)
 	if not prefix or type(settings) ~= "table" then return false end
+	local name = GetString(prefix .. ".name")
 	ClearKey(prefix)
+	if name ~= "" then SetString(prefix .. ".name", name) end
 	SetFloat(prefix .. ".duration", settings.duration)
 	SetFloat(prefix .. ".headshot", settings.headshot)
 	for name, value in pairs(settings.hud) do SetBool(prefix .. ".hud." .. string.lower(name), value) end
@@ -61,7 +89,9 @@ end
 function CDMP.DeletePreset(slot)
 	local prefix = slotKey(slot)
 	if not prefix then return false end
+	local name = GetString(prefix .. ".name")
 	ClearKey(prefix)
+	if name ~= "" then SetString(prefix .. ".name", name) end
 	return true
 end
 

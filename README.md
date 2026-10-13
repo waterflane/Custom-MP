@@ -17,7 +17,7 @@ Before starting the match, open **Game mode settings**. The panel uses Teardown'
 - **Match:** duration (3, 5, 8, 10, 15, 20 or 30 minutes) and headshot multiplier.
 - **Tools:** enable each starting tool, set starting ammo (0–100), allow it in loot, set its relative loot weight (0–10) and pickup ammo (0–100).
 - **HUD:** player names, hit markers, kill markers and damage numbers. These are host-selected settings for all players; objective markers remain visible when player names are disabled.
-- **Presets:** five shared slots with Save/overwrite, Load and Delete actions.
+- **Presets:** five shared slots in a dropdown, with Save/overwrite, Load, Rename and Clear settings actions.
 
 Settings are applied together when the host presses **Start** and cannot be changed during the match. Team modes retain the official team selection/countdown. Settings reset to the mode's defaults when a new game is created; use a preset to reuse a configuration.
 
@@ -31,11 +31,11 @@ Active vanilla and Workshop tools come from `game.tool`. Custom tools start disa
 
 The five slots are initially empty and belong to the local host. They are shared across these three modes and all maps, and persist across game restarts through `savegame.mod.cdmp.presets`. The storage implementation is in `scripts/shared/presets.lua`; the game writes its own mod save data, rather than modifying a Lua source file.
 
-Save writes all current settings into the selected slot; saving again replaces that slot. Load fills the setup screen without starting a match. Delete empties the slot without changing the current draft. Presets do not contain a map, teams, scores or match state.
+Save writes all current settings into the selected slot; saving again replaces that slot. Load fills the setup screen without starting a match. Clear settings empties the slot without changing the current draft or its name. Rename works for empty and saved slots, accepts up to 32 characters and supports English/Russian keyboard input and an on-screen keyboard. Presets do not contain a map, teams, scores or match state.
 
 Missing Workshop tools are skipped with a message. Loading never changes the saved slot, so those tools remain in the preset if they become available again. Explicitly overwriting the slot saves only the currently available tool configuration.
 
-**Русский:** перед началом матча хост открывает «Настройки режима» → «Пресеты». Доступны пять общих пустых слотов. «Сохранить / перезаписать» записывает текущие настройки, «Загрузить» заполняет меню, «Удалить» очищает только выбранный слот. Для применения загруженных настроек нужно запустить матч. Пресеты сохраняются после перезапуска игры и доступны в DM, TDM и CTF на любой карте.
+**Русский:** перед началом матча хост открывает «Настройки режима» → «Пресеты». Доступны пять общих пустых слотов. «Сохранить / перезаписать» записывает текущие настройки, «Загрузить» заполняет меню, «Очистить настройки» очищает конфиг выбранного слота, сохраняя его имя. Слоты выбираются из выпадающего списка; их можно переименовать. Для применения загруженных настроек нужно запустить матч. Пресеты сохраняются после перезапуска игры и доступны в DM, TDM и CTF на любой карте.
 
 ## Installation
 
