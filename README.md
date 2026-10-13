@@ -14,7 +14,7 @@ The mode scripts, spawn algorithms, teams, spectator cameras, scoring, objective
 
 Before starting the match, open **Game mode settings**. The panel uses Teardown's Multiplayer Classics UI and navigation helpers, with English and Russian text. Other languages use English for the added settings.
 
-- **Match:** choose preset durations (3, 5, 8, 10, 15, 20 or 30 minutes) or a custom time slider up to 24 hours, in one-minute steps. The lowest value is labelled Unlimited. Headshot multiplier keeps its existing selector.
+- **Match:** choose preset durations (3, 5, 8, 10, 15, 20 or 30 minutes) or a custom time slider from 0 to 6 hours, in one-minute steps. The lowest value is labelled Unlimited. Headshot multiplier keeps its existing selector.
 - **Tools:** numbered cards show tool names and current loadout/loot status. Card rows and pagination reserve space for the footer; opening a tool shows its controls, and Back returns to the same list page. Enable each starting tool, set starting ammo (0–100), allow it in loot, set its relative loot weight (0–10) and pickup ammo (0–100). These three numeric values use integer sliders with visible values and mouse/keyboard/gamepad control.
 - **HUD:** player names, hit markers, kill markers and damage numbers. These are host-selected settings for all players; objective markers remain visible when player names are disabled.
 - **Presets:** five shared slots in a card list showing names and saved/empty status. The list reserves space for Cancel, uses smaller rows in short windows and pages when needed. The selected card opens the list; Save/overwrite is the primary action, beside Load, with Rename and Clear settings below.
@@ -27,7 +27,7 @@ The loot pool uses configurable tool weights and the same pool at all official l
 
 Active vanilla and Workshop tools come from `game.tool`. Custom tools start disabled and with zero loot weight until configured. Internal CTF flag tools never appear in the settings or loot pool.
 
-Unlimited matches show elapsed time with ∞ and do not end by timer. Finite matches retain the official countdown/results behavior. Presets store both time choices and the selected mode; older presets load as preset durations.
+Unlimited matches show elapsed time with ∞ and do not end by timer. Finite matches retain the official countdown/results behavior. Presets store both time choices and the selected mode; older presets without time-mode fields load as preset durations. Custom durations above six hours are capped when applied, without changing the saved slot.
 
 ## Presets / Пресеты
 

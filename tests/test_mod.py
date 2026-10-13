@@ -698,36 +698,57 @@ class ModTests(unittest.TestCase):
             local s=CDMP.ValidateSettings(raw,'dm',server.cdmpTools)
             assert(s.duration == 600 and s.customDuration == 120 and CDMP.GetMatchDuration(s) == 120)
             raw.customDuration=999999
-            assert(CDMP.ValidateSettings(raw,'dm',server.cdmpTools).customDuration == 86400)
+            for _,mode in ipairs({'dm','tdm','ctf'}) do
+                assert(CDMP.ValidateSettings(raw,mode,server.cdmpTools).customDuration == 21600)
+            end
+            raw.customDuration=60
+            assert(CDMP.ValidateSettings(raw,'dm',server.cdmpTools).customDuration == 60)
+            raw.customDuration=21600
+            assert(CDMP.ValidateSettings(raw,'dm',server.cdmpTools).customDuration == 21600)
             raw.customDuration=-1
             assert(CDMP.ValidateSettings(raw,'dm',server.cdmpTools).customDuration == 0)
             for _, bad in ipairs({0/0,math.huge,-math.huge,'bad'}) do
                 raw.customDuration=bad
                 assert(CDMP.ValidateSettings(raw,'dm',server.cdmpTools).customDuration == 600)
             end
-            assert(CDMP.FormatClock(86400) == '24:00:00')
+            assert(CDMP.FormatClock(21600) == '06:00:00')
         """)
 
     def test_custom_time_presets_and_mode_switching(self):
         self.check(UI_MOCK)
         self.check("""
             local s=CDMP.Copy(shared.cdmp.settings)
-            s.timeMode='custom'; s.customDuration=86400; s.duration=600
+            s.timeMode='custom'; s.customDuration=21600; s.duration=600
             CDMP.SavePreset(1,s)
             local saved=CDMP.LoadPreset(1)
-            assert(saved.timeMode == 'custom' and saved.customDuration == 86400 and saved.duration == 600)
+            assert(saved.timeMode == 'custom' and saved.customDuration == 21600 and saved.duration == 600)
             CDMP_SetDraft(CDMP.PreparePreset(saved,'ctf',server.cdmpTools))
-            assert(CDMP_ReadDraft().customDuration == 86400)
+            assert(CDMP_ReadDraft().customDuration == 21600)
             client.cdmpSettingsVisible=true; client.cdmpSection=1
             CDMP_DrawSetup()
             SetString('level.cdmp.draft.timemode','preset'); SetInt('level.cdmp.draft.timemode.index',1)
             CDMP_DrawSetup()
-            assert(CDMP_ReadDraft().duration == 600 and CDMP_ReadDraft().customDuration == 86400)
+            assert(CDMP_ReadDraft().duration == 600 and CDMP_ReadDraft().customDuration == 21600)
             SetString('level.cdmp.draft.timemode','custom'); SetInt('level.cdmp.draft.timemode.index',2)
             SetInt('level.cdmp.draft.customminutes',0)
             CDMP_DrawSetup()
             assert(CDMP_ReadDraft().customDuration == 0)
             local found=false; for _, text in ipairs(uiTexts) do if text == 'CDMP_UNLIMITED' then found=true end end; assert(found)
+            -- Previously saved 24-hour settings remain intact, but apply within the new limit.
+            SetFloat('savegame.mod.cdmp.presets.1.customduration',86400)
+            local old=CDMP.LoadPreset(1)
+            assert(old.customDuration == 86400)
+            local prepared=CDMP.PreparePreset(old,'dm',server.cdmpTools)
+            assert(prepared.customDuration == 21600 and CDMP.LoadPreset(1).customDuration == 86400)
+            local maxMinutes
+            function CDMP_DrawSlider(field)
+                if field.key == 'level.cdmp.draft.customminutes' then
+                    maxMinutes=field.max
+                    assert(field.format(field.max) == '06:00')
+                end
+            end
+            CDMP_SetDraft(prepared); CDMP_DrawSetup()
+            assert(maxMinutes == 360 and CDMP_ReadDraft().customDuration == 21600)
             ClearKey('savegame.mod.cdmp.presets.1.timemode'); ClearKey('savegame.mod.cdmp.presets.1.customduration')
             saved=CDMP.LoadPreset(1)
             assert(saved.timeMode == 'preset' and saved.customDuration == 600)
@@ -753,8 +774,8 @@ class ModTests(unittest.TestCase):
                 CDMP.TickMatchTime(1)
                 assert(CDMP.MatchEnded() and shared.time == 0)
             end
-            shared.time=86400; CDMP.DrawMatchTimer(1)
-            assert(uiTexts[#uiTexts] == '24:00:00')
+            shared.time=21600; CDMP.DrawMatchTimer(1)
+            assert(uiTexts[#uiTexts] == '06:00:00')
             shared.time=59; CDMP.DrawMatchTimer(1)
             assert(calls.timer == 1)
         """)

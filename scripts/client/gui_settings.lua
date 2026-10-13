@@ -34,7 +34,7 @@ local function matchItems(settings, seed)
 		items[#items + 1] = item("duration", "TIME", optionList(CDMP.DURATION_OPTIONS, CDMP.FormatTime), settings.duration)
 	end
 	if seed or mode == "custom" then
-		items[#items + 1] = sliderItem("customminutes", "CUSTOM_TIME", 1440, (settings.customDuration or settings.duration) / 60,
+		items[#items + 1] = sliderItem("customminutes", "CUSTOM_TIME", CDMP.MAX_CUSTOM_DURATION / 60, (settings.customDuration or settings.duration) / 60,
 			function(minutes)
 				if minutes == 0 then return CDMP.Text("UNLIMITED") end
 				return string.format("%02d:%02d", math.floor(minutes / 60), minutes % 60)

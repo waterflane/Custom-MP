@@ -8,6 +8,7 @@ CDMP.SUPPRESSED_DAMAGE_TIME = 0.35
 CDMP.HEAD_RADIUS = 0.45
 CDMP.HEAD_OFFSET = Vec(0, 0.18, 0)
 
+CDMP.MAX_CUSTOM_DURATION = 6 * 60 * 60
 CDMP.DURATION_OPTIONS = {180, 300, 480, 600, 900, 1200, 1800}
 CDMP.HEADSHOT_OPTIONS = {1.0, 1.15, 1.25, 1.3, 1.5, 2.0, 2.5, 3.0}
 
@@ -96,7 +97,7 @@ function CDMP.ValidateSettings(raw, mode, tools)
 	settings.customDuration = settings.duration
 	local seconds = raw.customDuration
 	if type(seconds) == "number" and seconds == seconds and seconds ~= math.huge and seconds ~= -math.huge then
-		settings.customDuration = math.floor(CDMP.Clamp(seconds, 0, 86400) / 60 + 0.5) * 60
+		settings.customDuration = math.floor(CDMP.Clamp(seconds, 0, CDMP.MAX_CUSTOM_DURATION) / 60 + 0.5) * 60
 	end
 	settings.headshot = allowedNumber(raw.headshot, CDMP.HEADSHOT_OPTIONS, settings.headshot)
 	if type(raw.hud) == "table" then
