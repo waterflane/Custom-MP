@@ -83,11 +83,7 @@ local function drawRename(width)
 	UiTranslate(10, 9); UiFont("regular.ttf", FONT_SIZE_22)
 	local _, name = uiTextConstrained((client.cdmpNameBuffer or "") .. "|", "regular.ttf", FONT_SIZE_22, width - 20)
 	UiText(name); UiPop()
-	UiTranslate(0, 72)
-	UiPush(); UiAlign("left middle"); UiFont("regular.ttf", FONT_SIZE_18)
-	local _, hint = uiTextConstrained(CDMP.Text("NAME_INPUT_HINT"), "regular.ttf", FONT_SIZE_18, width)
-	UiText(hint); UiPop()
-	UiTranslate(0, 62)
+	UiTranslate(0, 86)
 	local buttonWidth = (width - 12) / 2
 	UiPush(); UiTranslate(buttonWidth / 2, 0); UiAlign("center middle")
 	if uiDrawPrimaryButton(CDMP.Text("CONFIRM"), buttonWidth) then CDMP.ConfirmPresetRename() end
@@ -157,7 +153,7 @@ function CDMP_DrawPresetModal()
 		CDMP.PresetNameKey(key)
 	end
 	local width = math.min(700, UiWidth() - 40)
-	local height = modal == "rename" and 262 or 448
+	local height = modal == "rename" and 214 or 448
 	navigationBeginGroup(modal == "rename" and "cdmpRename" or "cdmpPresetList", true)
 	UiMakeInteractive(); UiPush()
 	UiAlign("left top"); UiColor(0, 0, 0, 0.65); UiRect(UiWidth(), UiHeight())

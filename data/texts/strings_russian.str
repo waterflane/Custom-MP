@@ -66,6 +66,5 @@ CDMP_PRESET_TIME                              "Готовые значения"
 CDMP_CUSTOM_TIME                              "Своё время"
 CDMP_UNLIMITED                                "Без ограничений"
 
-CDMP_NAME_INPUT_HINT                          "Введите имя (32 символа). Shift / Caps Lock: регистр."
 
 CDMP_OVERWRITE                                "Перезаписать"

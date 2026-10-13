@@ -788,7 +788,7 @@ class SourceTests(unittest.TestCase):
         keys = set(re.findall(r'CDMP.Text\("([A-Z_]+)"\)', (ROOT / "scripts/client/gui_settings.lua").read_text(encoding="utf-8")))
         for language in ("english", "russian", "french", "german", "italian", "japanese", "polish", "simplified_chinese", "spanish"):
             text = (ROOT / f"data/texts/strings_{language}.str").read_text(encoding="utf-8")
-            for key in keys | {"NAME_INPUT_HINT", "OVERWRITE"}:
+            for key in keys | {"OVERWRITE"}:
                 self.assertRegex(text, rf'(?m)^CDMP_{key}\s+".+"$')
 
 

@@ -67,4 +67,3 @@ CDMP_CUSTOM_TIME                              "Custom time"
 CDMP_UNLIMITED                                "Unlimited"
 
 CDMP_OVERWRITE                                "Overwrite"
-CDMP_NAME_INPUT_HINT                          "Type a name (32 characters). Shift / Caps Lock: case."
