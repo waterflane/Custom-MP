@@ -39,6 +39,17 @@ Missing Workshop tools are skipped with a message. Loading never changes the sav
 
 **Русский:** перед началом матча хост открывает «Настройки режима» → «Пресеты». Доступны пять общих пустых слотов. «Сохранить / перезаписать» записывает текущие настройки, «Загрузить» заполняет меню, «Очистить настройки» очищает конфиг выбранного слота, сохраняя его имя. Слоты выбираются из выпадающего списка; их можно переименовать. Для применения загруженных настроек нужно запустить матч. Пресеты сохраняются после перезапуска игры и доступны в DM, TDM и CTF на любой карте.
 
+Preset storage on Windows is part of `%LOCALAPPDATA%\Teardown\savegame.xml`, under the mod's own entry in `savegame.mod`. For this local folder the entry is normally `local-custom-mp`; copying only the mod's Lua files does not copy presets. Renaming the folder or switching to the Workshop version changes the mod identity and may open a different save entry.
+
+**Перенос только пресетов:**
+
+1. Закройте Teardown на обоих компьютерах и сделайте резервные копии их `savegame.xml`.
+2. На исходном компьютере найдите запись мода (`local-custom-mp` для папки `Custom MP`) внутри `<savegame><mod>`, затем её `<cdmp><presets>`. Скопируйте целиком блок `<presets>...</presets>`: в нём все пять слотов, имена и версии формата.
+3. На другом компьютере установите мод, один раз сохраните любой пресет и закройте игру, чтобы создать запись назначения. В текстовом редакторе замените только её блок `<presets>` скопированным. Для другого имени папки или Workshop используйте запись назначения, а не исходный идентификатор мода. Остальные данные сохранения не меняйте.
+4. Запустите игру и загрузите нужный слот. Для Workshop-инструментов нужны те же активные моды; отсутствующие инструменты пропускаются.
+
+Отдельного файла экспорта пресетов пока нет. Для переноса всего игрового сохранения можно копировать весь `savegame.xml`, но тогда переносятся также прогресс и настройки других модов.
+
 ## Installation
 
 Place this mod's folder under `Documents/Teardown/mods/` and enable **Custom MP**. The existing game-mode identifiers are retained. Do not commit `id.txt`; it links the local folder to a Steam Workshop item.

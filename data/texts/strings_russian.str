@@ -45,7 +45,7 @@ CDMP_PICKUP_AMOUNT                            "Боезапас из ящика 
 CDMP_PRESET                                   "Пресет"
 CDMP_SAVED                                    "Сохранён"
 CDMP_EMPTY                                    "Пустой слот"
-CDMP_SAVE                                     "Сохранить / перезаписать"
+CDMP_SAVE                                     "Сохранить"
 CDMP_LOAD                                     "Загрузить"
 CDMP_DELETE                                   "Очистить настройки"
 CDMP_PRESET_SAVED                             "Пресет сохранён."
@@ -67,3 +67,5 @@ CDMP_CUSTOM_TIME                              "Своё время"
 CDMP_UNLIMITED                                "Без ограничений"
 
 CDMP_NAME_INPUT_HINT                          "Введите имя (32 символа). Shift / Caps Lock: регистр."
+
+CDMP_OVERWRITE                                "Перезаписать"

@@ -139,7 +139,7 @@ local function drawPresets(width)
 	UiTranslate(0, 108); UiAlign("center middle")
 	local buttonWidth = (width - 16) / 2
 	UiPush(); UiTranslate(buttonWidth / 2, 0)
-	if uiDrawPrimaryButton(CDMP.Text("SAVE"), buttonWidth) then
+	if uiDrawPrimaryButton(CDMP.Text(exists and "OVERWRITE" or "SAVE"), buttonWidth) then
 		CDMP.SavePreset(slot, CDMP_ReadDraft()); CDMP.Notify(CDMP.Text("PRESET_SAVED"))
 	end
 	UiPop(); UiPush(); UiTranslate(width - buttonWidth / 2, 0)

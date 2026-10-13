@@ -314,6 +314,10 @@ class ModTests(unittest.TestCase):
             uiClicks.CDMP_SAVE=true
             CDMP_DrawSetup()
             assert(CDMP.PresetExists(1) and #uiStack == 0)
+            SetInt('level.cdmp.draft.tools.67756e.ammo',28)
+            uiClicks.CDMP_OVERWRITE=true
+            CDMP_DrawSetup()
+            assert(CDMP.LoadPreset(1).tools.gun.ammo == 28)
             SetString('level.cdmp.draft.duration',600)
             uiClicks.CDMP_LOAD=true
             CDMP_DrawSetup()
@@ -779,9 +783,9 @@ class SourceTests(unittest.TestCase):
                 with self.subTest(asset=asset):
                     self.assertTrue((ROOT / asset).is_file(), f"Missing MOD/{asset} in {path}")
         keys = set(re.findall(r'CDMP.Text\("([A-Z_]+)"\)', (ROOT / "scripts/client/gui_settings.lua").read_text(encoding="utf-8")))
-        for language in ("english", "russian"):
+        for language in ("english", "russian", "french", "german", "italian", "japanese", "polish", "simplified_chinese", "spanish"):
             text = (ROOT / f"data/texts/strings_{language}.str").read_text(encoding="utf-8")
-            for key in keys:
+            for key in keys | {"NAME_INPUT_HINT", "OVERWRITE"}:
                 self.assertRegex(text, rf'(?m)^CDMP_{key}\s+".+"$')
 
 
