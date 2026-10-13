@@ -108,14 +108,14 @@ function server.tick(dt)
 	spawnSetRespawnAtCurrentLocation(false)
 
 	if countdownTick(dt) then return end
-	if shared.time <= 0 then
+	if CDMP.MatchEnded() then
 		for p in Players() do
 			DisablePlayerInput(p)
 		end
 		return
 	end
 
-	shared.time = shared.time - dt;
+	CDMP.TickMatchTime(dt)
 
 	CDMP_CombatTick(dt)
 	statsTick(teamsGetPlayerTeamsList())
@@ -158,7 +158,7 @@ function client.draw(dt)
 	local myTeamId = teamsGetTeamId(GetLocalPlayer())
 	local otherTeamId = 1 + (myTeamId % 2)
 
-	local matchEnded = shared.time <= 0.0
+	local matchEnded = CDMP.MatchEnded()
 
 	if not matchEnded then
 		hudDrawPlayerWorldMarkers(teamsGetTeamPlayers(myTeamId), false, 9999.0, teamsGetColor(myTeamId))
@@ -173,7 +173,7 @@ function client.draw(dt)
 		end
 	end
 
-	hudDrawTimer(shared.time, 1.0 - clamp(countdownGetTime()/0.2, 0.0, 1.0))
+	CDMP.DrawMatchTimer(1.0 - clamp(countdownGetTime()/0.2, 0.0, 1.0))
 	local teamTotals = {0, 0}
 	for p in Players() do
 		local otherTeamId = 1 + (teamsGetTeamId(p) % 2)

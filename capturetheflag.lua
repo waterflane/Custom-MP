@@ -224,14 +224,14 @@ function server.tick(dt)
 
 	if countdownTick(dt) then return end
 
-	if shared.time <= 0 then
+	if CDMP.MatchEnded() then
 		for p in Players() do
 			DisablePlayerInput(p)
 		end
 		return
 	end
 
-	shared.time = shared.time - dt;
+	CDMP.TickMatchTime(dt)
 
 	CDMP_CombatTick(dt)
 	statsTick(teamsGetPlayerTeamsList())
@@ -745,7 +745,7 @@ function client.draw(dt)
 		end
 	end
 
-	local matchEnded = shared.time <= 0.0
+	local matchEnded = CDMP.MatchEnded()
 
 	if not matchEnded then
 		hudDrawWorldMarkers(markers)
@@ -753,7 +753,7 @@ function client.draw(dt)
 
 	eventlogDraw(dt, teamsGetPlayerColorsList())
 
-	hudDrawTimer(shared.time, 1.0 - clamp(countdownGetTime()/0.2, 0.0, 1.0))
+	CDMP.DrawMatchTimer(1.0 - clamp(countdownGetTime()/0.2, 0.0, 1.0))
 
 	hudDrawScore2Teams(
 		teamsGetColor(myTeamId),    shared.score[myTeamId],
@@ -764,7 +764,7 @@ function client.draw(dt)
 	hudDrawDamageIndicators(dt)
 	CDMP_DrawCombat()
 
-	local matchEnded = shared.time <= 0.0
+	local matchEnded = CDMP.MatchEnded()
 
 	if not matchEnded and (shared.flags[1].carriedByPlayer == GetLocalPlayer() or shared.flags[2].carriedByPlayer == GetLocalPlayer()) then
 		UiPush()

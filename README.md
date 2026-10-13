@@ -14,7 +14,7 @@ The mode scripts, spawn algorithms, teams, spectator cameras, scoring, objective
 
 Before starting the match, open **Game mode settings**. The panel uses Teardown's Multiplayer Classics UI and navigation helpers, with English and Russian text. Other languages use English for the added settings.
 
-- **Match:** duration (3, 5, 8, 10, 15, 20 or 30 minutes) and headshot multiplier.
+- **Match:** choose preset durations (3, 5, 8, 10, 15, 20 or 30 minutes) or a custom time slider up to 24 hours, in one-minute steps. The lowest value is labelled Unlimited. Headshot multiplier keeps its existing selector.
 - **Tools:** enable each starting tool, set starting ammo (0–100), allow it in loot, set its relative loot weight (0–10) and pickup ammo (0–100). These three numeric values use integer sliders with visible values and mouse/keyboard/gamepad control.
 - **HUD:** player names, hit markers, kill markers and damage numbers. These are host-selected settings for all players; objective markers remain visible when player names are disabled.
 - **Presets:** five shared slots in a dropdown, with Save/overwrite, Load, Rename and Clear settings actions.
@@ -26,6 +26,8 @@ Vanilla starting equipment is a gun with 7 rounds, sledge, spraycan and extingui
 The loot pool uses configurable tool weights and the same pool at all official low/medium/high spawn points. Official spawn-point generation, interaction pickup, weapon drops and 20-second crate respawn remain in use. A zero weight excludes a tool; an entirely empty pool produces no crates. Starting with no tools is supported. Pickup ammo of zero is preserved.
 
 Active vanilla and Workshop tools come from `game.tool`. Custom tools start disabled and with zero loot weight until configured. Internal CTF flag tools never appear in the settings or loot pool.
+
+Unlimited matches show elapsed time with ∞ and do not end by timer. Finite matches retain the official countdown/results behavior. Presets store both time choices and the selected mode; older presets load as preset durations.
 
 ## Presets / Пресеты
 

@@ -26,7 +26,7 @@ function server.settingsApplyAndStart(playerId, raw)
 			if #transforms > 0 then toolsAddLootTier(transforms, loot) end
 		end
 	end
-	shared.time = settings.duration
+	shared.time = CDMP.GetMatchDuration(settings)
 	server.cdmpStarted = true
 	if server.cdmpMode == "dm" then
 		spawnRespawnAllPlayers()

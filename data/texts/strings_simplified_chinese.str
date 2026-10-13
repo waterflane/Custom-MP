@@ -63,3 +63,8 @@ CDMP_SPACE                                    "Space"
 CDMP_BACKSPACE                                "Backspace"
 CDMP_CLEAR_NAME                               "Clear text"
 CDMP_PRESET_RENAMED                           "Preset renamed."
+
+CDMP_TIME_MODE                                "Time mode"
+CDMP_PRESET_TIME                              "Preset durations"
+CDMP_CUSTOM_TIME                              "Custom time"
+CDMP_UNLIMITED                                "Unlimited"

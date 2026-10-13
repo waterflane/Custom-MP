@@ -81,6 +81,7 @@ function ServerCall(name,player,settings) calls.rpc = {name,player,settings} end
 
 UI_MOCK = r'''
 FONT_BOLD, FONT_MEDIUM, FONT_SIZE_30, FONT_SIZE_22, FONT_SIZE_18, FONT_SCALE = 'bold.ttf','regular.ttf',36.9,27,22,1.23
+FONT_SIZE_36=44
 COLOR_WHITE, COLOR_YELLOW = {1,1,1,1}, {1,1,0.5,1}
 uiStack, uiDisabled, uiClicks, uiGroups, uiSteppers = {}, false, {}, {}, {}
 function UiPush() uiStack[#uiStack+1] = uiDisabled end
@@ -94,7 +95,9 @@ function UiTranslate() end
 function UiAlign() end
 function UiColor() end
 function UiFont() end
-function UiText() end
+uiTexts={}
+function UiText(text) uiTexts[#uiTexts+1]=tostring(text) end
+function UiGetTextSize(text) return #text*10,20,0,0 end
 function UiRect() end
 function UiMakeInteractive() end
 function UiRoundedRectOutline() end
@@ -413,6 +416,75 @@ class ModTests(unittest.TestCase):
             assert(GetInt(path) == 7)
         """)
 
+    def test_custom_time_validation_and_legacy_defaults(self):
+        self.check("""
+            local legacy=CDMP.ValidateSettings({duration=900},'dm',server.cdmpTools)
+            assert(legacy.timeMode == 'preset' and legacy.customDuration == 900)
+            local raw={duration=600,timeMode='custom',customDuration=125}
+            local s=CDMP.ValidateSettings(raw,'dm',server.cdmpTools)
+            assert(s.duration == 600 and s.customDuration == 120 and CDMP.GetMatchDuration(s) == 120)
+            raw.customDuration=999999
+            assert(CDMP.ValidateSettings(raw,'dm',server.cdmpTools).customDuration == 86400)
+            raw.customDuration=-1
+            assert(CDMP.ValidateSettings(raw,'dm',server.cdmpTools).customDuration == 0)
+            for _, bad in ipairs({0/0,math.huge,-math.huge,'bad'}) do
+                raw.customDuration=bad
+                assert(CDMP.ValidateSettings(raw,'dm',server.cdmpTools).customDuration == 600)
+            end
+            assert(CDMP.FormatClock(86400) == '24:00:00')
+        """)
+
+    def test_custom_time_presets_and_mode_switching(self):
+        self.check(UI_MOCK)
+        self.check("""
+            local s=CDMP.Copy(shared.cdmp.settings)
+            s.timeMode='custom'; s.customDuration=86400; s.duration=600
+            CDMP.SavePreset(1,s)
+            local saved=CDMP.LoadPreset(1)
+            assert(saved.timeMode == 'custom' and saved.customDuration == 86400 and saved.duration == 600)
+            CDMP_SetDraft(CDMP.PreparePreset(saved,'ctf',server.cdmpTools))
+            assert(CDMP_ReadDraft().customDuration == 86400)
+            client.cdmpSettingsVisible=true; client.cdmpSection=1
+            CDMP_DrawSetup()
+            SetString('level.cdmp.draft.timemode','preset'); SetInt('level.cdmp.draft.timemode.index',1)
+            CDMP_DrawSetup()
+            assert(CDMP_ReadDraft().duration == 600 and CDMP_ReadDraft().customDuration == 86400)
+            SetString('level.cdmp.draft.timemode','custom'); SetInt('level.cdmp.draft.timemode.index',2)
+            SetInt('level.cdmp.draft.customminutes',0)
+            CDMP_DrawSetup()
+            assert(CDMP_ReadDraft().customDuration == 0)
+            local found=false; for _, text in ipairs(uiTexts) do if text == 'CDMP_UNLIMITED' then found=true end end; assert(found)
+            ClearKey('savegame.mod.cdmp.presets.1.timemode'); ClearKey('savegame.mod.cdmp.presets.1.customduration')
+            saved=CDMP.LoadPreset(1)
+            assert(saved.timeMode == 'preset' and saved.customDuration == 600)
+        """)
+
+    def test_unlimited_and_finite_timer_for_all_modes(self):
+        self.check(UI_MOCK)
+        self.check("""
+            function hudDrawTimer() calls.timer=(calls.timer or 0)+1 end
+            for _, mode in ipairs({'dm','tdm','ctf'}) do
+                shared._hud.gameIsSetup=false; CDMP_ServerInit(mode,{{Transform()}})
+                local s=CDMP.Copy(shared.cdmp.settings)
+                s.timeMode='custom'; s.customDuration=0
+                server.settingsApplyAndStart(1,s)
+                assert(shared.time == 0 and CDMP.IsUnlimitedTime() and not CDMP.MatchEnded())
+                CDMP.TickMatchTime(90)
+                assert(shared.time == 90 and not CDMP.MatchEnded())
+                CDMP.DrawMatchTimer(1)
+                assert(not calls.timer and uiTexts[#uiTexts] == '∞ 00:01:30')
+                shared.cdmp.settings.customDuration=60; shared.time=60
+                CDMP.TickMatchTime(59)
+                assert(shared.time == 1 and not CDMP.MatchEnded())
+                CDMP.TickMatchTime(1)
+                assert(CDMP.MatchEnded() and shared.time == 0)
+            end
+            shared.time=86400; CDMP.DrawMatchTimer(1)
+            assert(uiTexts[#uiTexts] == '24:00:00')
+            shared.time=59; CDMP.DrawMatchTimer(1)
+            assert(calls.timer == 1)
+        """)
+
     def test_combat_defaults_and_optional_feedback(self):
         self.check('''
             health[2]=0.8
@@ -519,6 +591,30 @@ class SourceTests(unittest.TestCase):
                     server.settingsApplyAndStart(1,shared.cdmp.settings)
                     assert(server.cdmpStarted and hudGameIsSetup() and #_toolState.lootTiers == 3)
                     assert(_spawnState.defaultLoadout[1][1] == 'gun' and _spawnState.defaultLoadout[1][2] == 7)
+                    -- Execute the actual mode tick around the new time helpers.
+                    function GetAddedPlayers() return {} end
+                    function GetRemovedPlayers() return {} end
+                    function teamsTick() return false end
+                    function teamsIsSetup() return true end
+                    function spawnTick() end
+                    function countdownTick() return false end
+                    function statsTick() calls.stats=(calls.stats or 0)+1 end
+                    function toolsTick() end
+                    function eventlogTick() end
+                    function updateFlag() end
+                    function updateBase() end
+                    function GetPlayerTool() return 'gun' end
+                    function SetPlayerHurtSpeedScale() end
+                    function DisablePlayerInput() calls.disabled=(calls.disabled or 0)+1 end
+                    shared.cdmp.settings.timeMode='custom'; shared.cdmp.settings.customDuration=0; shared.time=0
+                    server.tick(90)
+                    assert(shared.time == 90 and not CDMP.MatchEnded() and not calls.disabled and calls.stats == 1)
+                    shared.cdmp.settings.customDuration=60; shared.time=60
+                    server.tick(61)
+                    assert(shared.time == 0 and CDMP.MatchEnded() and calls.stats == 2)
+                    server.tick(0.01)
+                    assert(calls.disabled == 2 and calls.stats == 2)
+
                 ''')
                 self.assertEqual(lua.eval("_spawnState.respawnTime"), 3 if mode == "ctf" else 10)
                 if mode == "ctf":

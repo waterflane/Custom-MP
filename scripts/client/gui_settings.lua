@@ -25,11 +25,23 @@ local function sliderItem(path, label, maximum, value, formatter)
 		min = 0, max = maximum, step = 1, default = value, format = formatter}
 end
 
-local function matchItems(settings)
-	return {
-		item("duration", "TIME", optionList(CDMP.DURATION_OPTIONS, CDMP.FormatTime), settings.duration),
-		item("headshot", "HEADSHOT", optionList(CDMP.HEADSHOT_OPTIONS, function(v) return "x" .. tostring(v) end), settings.headshot),
-	}
+local function matchItems(settings, seed)
+	local mode = settings.timeMode or "preset"
+	if not seed and HasKey(prefix .. "timemode") then mode = GetString(prefix .. "timemode") end
+	local items = {item("timemode", "TIME_MODE", {
+		option(CDMP.Text("PRESET_TIME"), "preset"), option(CDMP.Text("CUSTOM_TIME"), "custom")}, settings.timeMode or "preset")}
+	if seed or mode == "preset" then
+		items[#items + 1] = item("duration", "TIME", optionList(CDMP.DURATION_OPTIONS, CDMP.FormatTime), settings.duration)
+	end
+	if seed or mode == "custom" then
+		items[#items + 1] = sliderItem("customminutes", "CUSTOM_TIME", 1440, (settings.customDuration or settings.duration) / 60,
+			function(minutes)
+				if minutes == 0 then return CDMP.Text("UNLIMITED") end
+				return string.format("%02d:%02d", math.floor(minutes / 60), minutes % 60)
+			end)
+	end
+	items[#items + 1] = item("headshot", "HEADSHOT", optionList(CDMP.HEADSHOT_OPTIONS, function(v) return "x" .. tostring(v) end), settings.headshot)
+	return items
 end
 
 local function hudItems(settings)
@@ -63,13 +75,15 @@ end
 
 function CDMP_SetDraft(settings)
 	client.cdmpDraft = CDMP.Copy(settings)
-	seedItems(matchItems(settings)); seedItems(hudItems(settings))
+	seedItems(matchItems(settings, true)); seedItems(hudItems(settings))
 	for _, tool in ipairs(shared.cdmp.tools) do seedItems(toolItems(tool, settings)) end
 end
 
 function CDMP_ReadDraft()
 	local settings = CDMP.Copy(client.cdmpDraft)
 	settings.duration = readNumber(prefix .. "duration", settings.duration)
+	settings.timeMode = GetString(prefix .. "timemode") == "custom" and "custom" or "preset"
+	settings.customDuration = readNumber(prefix .. "customminutes", (settings.customDuration or settings.duration) / 60) * 60
 	settings.headshot = readNumber(prefix .. "headshot", settings.headshot)
 	for name, value in pairs(settings.hud) do settings.hud[name] = readNumber(prefix .. "hud." .. string.lower(name), value and 1 or 0) == 1 end
 	for _, tool in ipairs(shared.cdmp.tools) do
@@ -230,6 +244,6 @@ function CDMP_DrawSetup()
 end
 
 function CDMP_DrawCombat()
-	if not shared.cdmp or not hudGameIsSetup() or not countdownDone() or shared.time <= 0 then return end
+	if not shared.cdmp or not hudGameIsSetup() or not countdownDone() or CDMP.MatchEnded() then return end
 	drawHitMarkers(shared.cdmp); drawDamageNumbers(shared.cdmp)
 end

@@ -174,7 +174,8 @@ function CDMP_DrawSlider(field, width)
 	local minimum, maximum, step = field.min or 0, field.max, field.step or 1
 	local value = CDMP.RoundSlider(readNumber(field.key, field.default), minimum, maximum, step)
 	local controlWidth = math.min(300, width * 0.5)
-	local trackWidth = controlWidth - 72
+	local valueWidth = field.format and math.min(150, controlWidth * 0.55) or 64
+	local trackWidth = controlWidth - valueWidth - 8
 	UiPush(); UiAlign("left middle"); UiFont("regular.ttf", 23 * FONT_SCALE); UiColor(COLOR_WHITE)
 	local _, label = uiTextConstrained(field.label, "regular.ttf", 23 * FONT_SCALE, width - controlWidth - 16)
 	UiText(label)
@@ -202,7 +203,28 @@ function CDMP_DrawSlider(field, width)
 	UiPop()
 	SetInt(field.key, value)
 	UiPush(); UiTranslate(controlWidth, 16); UiAlign("right middle"); UiColor(COLOR_WHITE)
-	UiFont(FONT_MEDIUM, FONT_SIZE_22); UiText(field.format and field.format(value) or tostring(value)); UiPop()
+	UiFont(FONT_MEDIUM, FONT_SIZE_22)
+	local valueLabel = field.format and field.format(value) or tostring(value)
+	local textWidth = UiGetTextSize(valueLabel)
+	if textWidth > valueWidth then UiFont(FONT_MEDIUM, FONT_SIZE_22 * valueWidth / textWidth) end
+	UiText(valueLabel); UiPop()
 	UiPop()
 	return value
+end
+
+function CDMP.DrawMatchTimer(alpha)
+	if not CDMP.IsUnlimitedTime() and shared.time < 3600 then
+		hudDrawTimer(shared.time, alpha)
+		return
+	end
+	-- Elapsed time must not trigger the vanilla end-of-countdown warnings.
+	local text = CDMP.FormatClock(CDMP.IsUnlimitedTime() and shared.time or math.ceil(shared.time))
+	if CDMP.IsUnlimitedTime() then text = "∞ " .. text end
+	UiPush(); UiAlign("center top"); UiTranslate(UiCenter(), 40)
+	UiFont(FONT_BOLD, FONT_SIZE_36)
+	local textWidth = UiGetTextSize(text)
+	local a = alpha or 1
+	UiColor(0, 0, 0, 0.75 * a); UiRoundedRect(math.max(138, textWidth + 28), 52, 8)
+	UiColor(1, 1, 1, a); UiAlign("center middle"); UiTranslate(0, 26); UiText(text)
+	UiPop()
 end

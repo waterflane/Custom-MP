@@ -63,3 +63,8 @@ CDMP_SPACE                                    "Пробел"
 CDMP_BACKSPACE                                "Стереть"
 CDMP_CLEAR_NAME                               "Очистить"
 CDMP_PRESET_RENAMED                           "Пресет переименован."
+
+CDMP_TIME_MODE                                "Режим времени"
+CDMP_PRESET_TIME                              "Готовые значения"
+CDMP_CUSTOM_TIME                              "Своё время"
+CDMP_UNLIMITED                                "Без ограничений"

@@ -64,6 +64,7 @@ end
 function CDMP.DefaultSettings(mode, tools)
 	local settings = {
 		duration = mode == "ctf" and 480 or 300,
+		timeMode = "preset", customDuration = mode == "ctf" and 480 or 300,
 		headshot = 1.0,
 		hud = {nameplates = true, hitMarker = false, killMarker = false, damageNumbers = false},
 		tools = {},
@@ -91,6 +92,12 @@ function CDMP.ValidateSettings(raw, mode, tools)
 	local settings = CDMP.DefaultSettings(mode, tools)
 	if type(raw) ~= "table" then return settings end
 	settings.duration = allowedNumber(raw.duration, CDMP.DURATION_OPTIONS, settings.duration)
+	settings.timeMode = raw.timeMode == "custom" and "custom" or "preset"
+	settings.customDuration = settings.duration
+	local seconds = raw.customDuration
+	if type(seconds) == "number" and seconds == seconds and seconds ~= math.huge and seconds ~= -math.huge then
+		settings.customDuration = math.floor(CDMP.Clamp(seconds, 0, 86400) / 60 + 0.5) * 60
+	end
 	settings.headshot = allowedNumber(raw.headshot, CDMP.HEADSHOT_OPTIONS, settings.headshot)
 	if type(raw.hud) == "table" then
 		for name, default in pairs(settings.hud) do
@@ -149,4 +156,27 @@ end
 function CDMP.GetHeadshotCenter(playerId)
 	local eye = GetPlayerEyeTransform(playerId)
 	return TransformToParentPoint(eye, CDMP.HEAD_OFFSET)
+end
+
+function CDMP.GetMatchDuration(settings)
+	return settings.timeMode == "custom" and settings.customDuration or settings.duration
+end
+
+function CDMP.IsUnlimitedTime()
+	local settings = shared.cdmp and shared.cdmp.settings
+	return settings ~= nil and settings.timeMode == "custom" and settings.customDuration == 0
+end
+
+function CDMP.MatchEnded()
+	return not CDMP.IsUnlimitedTime() and (shared.time or 0) <= 0
+end
+
+function CDMP.TickMatchTime(dt)
+	if CDMP.IsUnlimitedTime() then shared.time = shared.time + dt
+	else shared.time = math.max(0, shared.time - dt) end
+end
+
+function CDMP.FormatClock(seconds)
+	seconds = math.max(0, math.floor(seconds or 0))
+	return string.format("%02d:%02d:%02d", math.floor(seconds / 3600), math.floor(seconds / 60) % 60, seconds % 60)
 end

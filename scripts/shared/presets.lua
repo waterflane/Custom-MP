@@ -50,6 +50,8 @@ function CDMP.SavePreset(slot, settings)
 	ClearKey(prefix)
 	if name ~= "" then SetString(prefix .. ".name", name) end
 	SetFloat(prefix .. ".duration", settings.duration)
+	SetString(prefix .. ".timemode", settings.timeMode or "preset")
+	SetFloat(prefix .. ".customduration", settings.customDuration or settings.duration)
 	SetFloat(prefix .. ".headshot", settings.headshot)
 	for name, value in pairs(settings.hud) do SetBool(prefix .. ".hud." .. string.lower(name), value) end
 	for id, item in pairs(settings.tools) do
@@ -70,6 +72,8 @@ function CDMP.LoadPreset(slot)
 	local prefix = slotKey(slot)
 	if not prefix or not CDMP.PresetExists(slot) then return nil end
 	local settings = {duration = GetFloat(prefix .. ".duration"), headshot = GetFloat(prefix .. ".headshot"), hud = {}, tools = {}}
+	settings.timeMode = GetString(prefix .. ".timemode") == "custom" and "custom" or "preset"
+	settings.customDuration = HasKey(prefix .. ".customduration") and GetFloat(prefix .. ".customduration") or settings.duration
 	for _, name in ipairs({"nameplates", "hitMarker", "killMarker", "damageNumbers"}) do
 		if HasKey(prefix .. ".hud." .. string.lower(name)) then settings.hud[name] = GetBool(prefix .. ".hud." .. string.lower(name)) end
 	end
