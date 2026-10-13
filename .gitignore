@@ -38,3 +38,9 @@ desktop.ini
 # Script/cache artifacts
 __pycache__/
 *.pyc
+
+# Local manual testing checklists
+**/MANUAL_TESTS*.md
+**/manual_tests*.md
+**/manual-tests*.md
+manual-tests/
