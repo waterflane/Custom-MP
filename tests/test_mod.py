@@ -364,6 +364,11 @@ class ModTests(unittest.TestCase):
 
 
 class SourceTests(unittest.TestCase):
+    def test_multiplayer_metadata_version(self):
+        # info.txt version is the engine format, not the CDMP release number.
+        info = (ROOT / "info.txt").read_text(encoding="utf-8")
+        self.assertRegex(info, r"(?m)^version\s*=\s*2\s*$")
+
     def test_full_modes_initialize_with_official_spawn_systems(self):
         for filename, mode in (("cdmp.lua", "dm"), ("teamdeathmatch.lua", "tdm"), ("capturetheflag.lua", "ctf")):
             with self.subTest(mode=mode):

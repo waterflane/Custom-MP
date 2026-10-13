@@ -7,5 +7,5 @@ en_description = Vanilla Deathmatch, Team Deathmatch and Capture the Flag with c
 ru_description = Ванильные Deathmatch, командный Deathmatch и захват флага с настройками инструментов, лута и пятью общими пресетами.
 tags = GameMode
 multiplayer = true
-version = 4
+version = 2
 preview = td_icon.jpg

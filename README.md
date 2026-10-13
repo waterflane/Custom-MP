@@ -39,7 +39,20 @@ Missing Workshop tools are skipped with a message. Loading never changes the sav
 
 ## Installation
 
-Copy this folder to `Documents/Teardown/mods/Custom Deathmatch MP`, enable the mod and select one of its three modes in a multiplayer session. The existing Deathmatch identifier is retained. Do not commit `id.txt`; it links the local folder to a Steam Workshop item.
+Copy this folder to `Documents/Teardown/mods/Custom Deathmatch MP` and enable the local mod. The existing Deathmatch identifier is retained. Do not commit `id.txt`; it links the local folder to a Steam Workshop item.
+
+## Testing from the editor / Тестирование из редактора
+
+This is a global game-mode mod, not a map: there is no root `main.xml` to open. The editor's Open/Save level dialogs list level files/folders, not the registered game modes. Open a separate test map in the editor instead.
+
+1. Enable **Custom Deathmatch MP** in the Mod Manager's local mods list, then reopen the editor/game if necessary to refresh metadata.
+2. Open a map made for version 2 (`version = 2` in that map's `info.txt`). Press **F5** to play it.
+3. Open **Esc → Game Modes / Игровые режимы** and select **Custom Deathmatch MP**, **Custom Team Deathmatch MP** or **Custom Capture the Flag MP**. Then set up the match as host and press Start. **F4** returns to the editor.
+4. For a local two/four-player test, select a local version-2 map in the Mod Manager and press **Play / Играть**. The play-options dialog includes the active mod's game modes and a **Number of Players / Количество игроков** choice for 1, 2 or 4 local players.
+
+`info.txt` must use `version = 2`: this is the engine's mod format, not the mod's release number (`CDMP.VERSION`). Real online sessions require published Workshop mods; use local testing during development.
+
+**Русский:** включите локальный мод, откройте в редакторе другую карту версии 2, запустите её через F5 и выберите режим через Esc → «Игровые режимы». Сам CDMP не содержит карты, поэтому искать его как уровень в File → Open не нужно. Для проверки с несколькими локальными игроками запускайте карту кнопкой «Играть» в менеджере модов и выбирайте количество игроков.
 
 ## Development and validation
 
