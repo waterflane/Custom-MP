@@ -92,6 +92,9 @@ function UiHeight() return 720 end
 function UiCenter() return UiWidth()/2 end
 function UiMiddle() return UiHeight()/2 end
 function UiTranslate() end
+function UiRotate() end
+function UiSound() end
+function navigationMakeLastItemDefault() end
 function UiAlign() end
 function UiColor() end
 function UiFont() end
@@ -102,7 +105,8 @@ function UiRect() end
 function UiMakeInteractive() end
 function UiRoundedRectOutline() end
 function UiRoundedRect() end
-function UiNavComponent() return 'slider' end
+uiComponents=0
+function UiNavComponent() uiComponents=uiComponents+1; return 'component'..uiComponents end
 function navigationAddItem() end
 function navigationMakeLastItemFocused() end
 function UiReceivesInput() return not uiDisabled end
@@ -334,7 +338,7 @@ class ModTests(unittest.TestCase):
             for page=1,2 do client.cdmpPage=page; CDMP_DrawSetup() end
             client.cdmpSelectedTool=nil; client.cdmpSection=4
             for page=1,2 do client.cdmpPage=page; CDMP_DrawSetup() end
-            assert(#uiStack == 0 and client.cdmpPage == 2)
+            assert(#uiStack == 0 and client.cdmpPage == 1)
         ''')
 
     def test_preset_names_survive_save_clear_and_reload(self):
@@ -361,8 +365,12 @@ class ModTests(unittest.TestCase):
             client.cdmpSettingsVisible=true; client.cdmpSection=4
             CDMP_DrawSetup()
             client.cdmpModal='list'
-            uiClicks['2. CDMP_PRESET 2 — CDMP_EMPTY']=true
-            CDMP_DrawSetup()
+            uiComponents=0
+            function UiIsComponentInFocus(id) return id == 'component2' end
+            function InputPressed(key) return key == 'menu_accept' end
+            CDMP_DrawPresetModal()
+            function InputPressed() return false end
+            function UiIsComponentInFocus() return false end
             assert(client.cdmpSelectedPreset == 2 and not client.cdmpModal and not calls.rpc)
             CDMP.OpenPresetRename(2)
             client.cdmpNameLanguage='ru'
@@ -409,6 +417,25 @@ class ModTests(unittest.TestCase):
             CDMP_DrawPresetModal()
             assert(#uiStack == 0)
             for _, text in ipairs(uiTexts) do assert(text ~= 'q' and text ~= 'й') end
+        """)
+
+    def test_preset_cards_literal_names_and_background_input(self):
+        self.check(UI_MOCK)
+        self.check("""
+            CDMP.RenamePreset(1,'small {literal} имя')
+            CDMP.DrawPresetCard(1,620,true,true)
+            assert(uiTexts[2] == 'small {literal} имя')
+            for _, text in ipairs(uiTexts) do assert(not text:find('▾',1,true)) end
+            function UiIsMouseInRect() return true end
+            function InputPressed(key) return key == 'lmb' end
+            UiPush(); UiDisableInput()
+            assert(not CDMP.DrawPresetCard(2,620,false,false))
+            UiPop()
+            assert(CDMP.DrawPresetCard(2,620,false,false))
+            function InputPressed(key) return key == 'menu_accept' end
+            function UiIsMouseInRect() return false end
+            function UiIsComponentInFocus() return true end
+            assert(CDMP.DrawPresetCard(3,620,false,false) and #uiStack == 0)
         """)
 
     def test_tool_slider_rounding_focus_and_disabled_input(self):

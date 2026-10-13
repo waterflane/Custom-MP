@@ -110,6 +110,52 @@ local function drawRename(width)
 	UiPop()
 end
 
+-- A text-independent chevron avoids missing-glyph boxes in Teardown fonts.
+local function drawPresetChevron()
+	UiPush(); UiAlign("left middle")
+	UiPush(); UiRotate(-45); UiRect(10, 2); UiPop()
+	UiTranslate(7, 7); UiRotate(45); UiRect(10, 2)
+	UiPop()
+end
+
+function CDMP.DrawPresetCard(slot, width, selected, selector)
+	local height = selector and 80 or 52
+	UiPush(); UiAlign("left top")
+	local navId = UiNavComponent(width, height)
+	navigationAddItem(navId)
+	local receivesInput = UiReceivesInput()
+	local hovered = receivesInput and UiIsMouseInRect(width, height)
+	local focused = receivesInput and UiIsComponentInFocus(navId)
+	if hovered then navigationMakeLastItemFocused() end
+	if selected then navigationMakeLastItemDefault() end
+	local pressed = receivesInput and ((hovered and InputPressed("lmb")) or (focused and InputPressed("menu_accept")))
+	UiColor(0.12, 0.14, 0.16, (hovered or focused) and 0.98 or 0.85)
+	UiRoundedRect(width, height, 8)
+	UiColor(selected and COLOR_YELLOW or COLOR_WHITE)
+	if selected or hovered or focused then UiRoundedRectOutline(width, height, 8, 2) end
+	UiPush(); UiTranslate(12, (height - 32) / 2)
+	UiColor(1, 1, 1, 0.08); UiRoundedRect(32, 32, 6)
+	UiTranslate(16, 16); UiAlign("center middle"); UiFont("regular.ttf", FONT_SIZE_18)
+	UiColor(selected and COLOR_YELLOW or COLOR_WHITE); UiText(tostring(slot)); UiPop()
+	UiTextDisableWildcards(true)
+	local status = CDMP.Text(CDMP.PresetExists(slot) and "SAVED" or "EMPTY")
+	local nameWidth = selector and width - 100 or width - 80 - UiGetTextSize(status)
+	UiPush(); UiTranslate(58, selector and 26 or height / 2); UiAlign("left middle")
+	UiColor(COLOR_WHITE); UiFont("regular.ttf", FONT_SIZE_22)
+	local _, name = uiTextConstrained(CDMP.GetPresetName(slot), "regular.ttf", FONT_SIZE_22, nameWidth)
+	UiText(name)
+	if selector then
+		UiTranslate(0, 27); UiColor(0.65, 0.7, 0.72, 1); UiFont("regular.ttf", FONT_SIZE_18); UiText(status)
+	end
+	UiPop(); UiPush(); UiTranslate(width - (selector and 32 or 16), height / 2)
+	UiColor(selected and COLOR_YELLOW or COLOR_WHITE)
+	if selector then drawPresetChevron()
+	else UiAlign("right middle"); UiFont("regular.ttf", FONT_SIZE_18); UiText(status) end
+	UiPop(); UiPop()
+	if pressed then UiSound("ui/common/click.ogg") end
+	return pressed
+end
+
 function CDMP_DrawPresetModal()
 	local modal = client.cdmpModal
 	if not modal then return end
@@ -124,7 +170,7 @@ function CDMP_DrawPresetModal()
 		CDMP.PresetNameKey(key)
 	end
 	local width = math.min(700, UiWidth() - 40)
-	local height = modal == "rename" and 262 or 384
+	local height = modal == "rename" and 262 or 448
 	navigationBeginGroup(modal == "rename" and "cdmpRename" or "cdmpPresetList", true)
 	UiMakeInteractive(); UiPush()
 	UiAlign("left top"); UiColor(0, 0, 0, 0.65); UiRect(UiWidth(), UiHeight())
@@ -139,12 +185,8 @@ function CDMP_DrawPresetModal()
 	else
 		local content = width - 48
 		for slot = 1, CDMP.PRESET_COUNT do
-			local _, name = uiTextConstrained(CDMP.GetPresetName(slot), FONT_MEDIUM, FONT_SIZE_22, content - 210)
-			local label = slot .. ". " .. name .. " — " .. CDMP.Text(CDMP.PresetExists(slot) and "SAVED" or "EMPTY")
-			UiPush(); UiTranslate(content / 2, 0); UiAlign("center middle")
-			if uiDrawSecondaryButton(label, content) then CDMP.SelectPreset(slot) end
-			if slot == (client.cdmpSelectedPreset or 1) then UiTranslate(0, 21); UiColor(COLOR_YELLOW); UiRect(content - 12, 2) end
-			UiPop(); UiTranslate(0, 48)
+			if CDMP.DrawPresetCard(slot, content, slot == (client.cdmpSelectedPreset or 1), false) then CDMP.SelectPreset(slot) end
+			UiTranslate(0, 58)
 		end
 		UiPush(); UiTranslate(content / 2, 4); UiAlign("center middle")
 		if uiDrawSecondaryButton(CDMP.Text("CANCEL"), content) then CDMP.ClosePresetModal() end
