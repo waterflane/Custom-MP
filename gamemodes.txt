@@ -6,7 +6,7 @@ description = Vanilla Deathmatch with configurable loadouts, loot and shared pre
 en_description = Vanilla Deathmatch with configurable loadouts, loot and shared presets.
 ru_description = Ванильный Deathmatch с настройками инструментов, лута и общими пресетами.
 path = cdmp.lua
-preview = td_icon.jpg
+preview = deathmatch_thumb.jpg
 
 [customteamdeathmatchmp]
 name = Custom MP: Team Deathmatch
