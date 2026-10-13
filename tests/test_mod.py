@@ -98,6 +98,16 @@ function UiText() end
 function UiRect() end
 function UiMakeInteractive() end
 function UiRoundedRectOutline() end
+function UiRoundedRect() end
+function UiNavComponent() return 'slider' end
+function navigationAddItem() end
+function navigationMakeLastItemFocused() end
+function UiReceivesInput() return not uiDisabled end
+function UiIsComponentInFocus() return false end
+function UiIsMouseInRect() return false end
+function UiNavSkipUpdate() end
+function UiIgnoreNavigation() end
+function UiSlider(path,axis,current) return current,false end
 function UiTextDisableWildcards() end
 function InputPressed() return false end
 function InputDown() return false end
@@ -363,6 +373,44 @@ class ModTests(unittest.TestCase):
             uiClicks.CDMP_CONFIRM=true
             CDMP_DrawSetup()
             assert(CDMP.GetPresetName(2) == 'Мой пресет' and not client.cdmpModal and #uiStack == 0)
+        """)
+
+    def test_tool_slider_rounding_focus_and_disabled_input(self):
+        self.check(UI_MOCK)
+        self.check("""
+            local field={key='level.cdmp.testslider',label='Ammo',min=0,max=100,step=1,default=0}
+            assert(CDMP.RoundSlider(49.6,0,100,1) == 50)
+            assert(CDMP.RoundSlider(-5,0,100,1) == 0 and CDMP.RoundSlider(900,0,100,1) == 100)
+            assert(CDMP.RoundSlider(0/0,0,100,1) == 0)
+            function UiSlider(path,axis,current,min,max) return max*0.376,false end
+            assert(CDMP_DrawSlider(field,700) == 38 and GetInt(field.key) == 38)
+            function UiSlider(path,axis,current) return current,false end
+            function UiIsComponentInFocus() return true end
+            function InputPressed(key) return key == 'menu_right' end
+            assert(CDMP_DrawSlider(field,700) == 39)
+            uiDisabled=true
+            assert(CDMP_DrawSlider(field,700) == 39)
+            uiDisabled=false
+            field.max=10; SetInt(field.key,10)
+            assert(CDMP_DrawSlider(field,700) == 10 and #uiStack == 0)
+        """)
+
+    def test_tool_sliders_do_not_restore_stale_stepper_index(self):
+        self.check(UI_MOCK)
+        self.check("""
+            local path='level.cdmp.draft.tools.'..CDMP.ToolStorageId('gun')..'.ammo'
+            SetInt(path..'.index',100)
+            CDMP_SetDraft(shared.cdmp.settings)
+            assert(not HasKey(path..'.index') and GetInt(path) == 7)
+            SetInt(path,63)
+            CDMP.SavePreset(1,CDMP_ReadDraft())
+            CDMP_SetDraft(CDMP.PreparePreset(CDMP.LoadPreset(1),'dm',server.cdmpTools))
+            assert(GetInt(path) == 63 and CDMP_ReadDraft().tools.gun.ammo == 63)
+            client.cdmpSettingsVisible=true; client.cdmpSection=2; client.cdmpSelectedTool=4
+            CDMP_DrawSetup()
+            assert(GetInt(path) == 63)
+            CDMP_SetDraft(CDMP.DefaultSettings('dm',server.cdmpTools))
+            assert(GetInt(path) == 7)
         """)
 
     def test_combat_defaults_and_optional_feedback(self):

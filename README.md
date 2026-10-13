@@ -15,7 +15,7 @@ The mode scripts, spawn algorithms, teams, spectator cameras, scoring, objective
 Before starting the match, open **Game mode settings**. The panel uses Teardown's Multiplayer Classics UI and navigation helpers, with English and Russian text. Other languages use English for the added settings.
 
 - **Match:** duration (3, 5, 8, 10, 15, 20 or 30 minutes) and headshot multiplier.
-- **Tools:** enable each starting tool, set starting ammo (0–100), allow it in loot, set its relative loot weight (0–10) and pickup ammo (0–100).
+- **Tools:** enable each starting tool, set starting ammo (0–100), allow it in loot, set its relative loot weight (0–10) and pickup ammo (0–100). These three numeric values use integer sliders with visible values and mouse/keyboard/gamepad control.
 - **HUD:** player names, hit markers, kill markers and damage numbers. These are host-selected settings for all players; objective markers remain visible when player names are disabled.
 - **Presets:** five shared slots in a dropdown, with Save/overwrite, Load, Rename and Clear settings actions.
 

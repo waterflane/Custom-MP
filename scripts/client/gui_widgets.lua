@@ -163,3 +163,46 @@ function CDMP_DrawPresetModal()
 	end
 	UiPop(); navigationEndGroup()
 end
+
+function CDMP.RoundSlider(value, minimum, maximum, step)
+	step = step or 1
+	value = CDMP.Clamp(value, minimum, maximum)
+	return CDMP.Clamp(minimum + math.floor((value - minimum) / step + 0.5) * step, minimum, maximum)
+end
+
+function CDMP_DrawSlider(field, width)
+	local minimum, maximum, step = field.min or 0, field.max, field.step or 1
+	local value = CDMP.RoundSlider(readNumber(field.key, field.default), minimum, maximum, step)
+	local controlWidth = math.min(300, width * 0.5)
+	local trackWidth = controlWidth - 72
+	UiPush(); UiAlign("left middle"); UiFont("regular.ttf", 23 * FONT_SCALE); UiColor(COLOR_WHITE)
+	local _, label = uiTextConstrained(field.label, "regular.ttf", 23 * FONT_SCALE, width - controlWidth - 16)
+	UiText(label)
+	UiTranslate(width - controlWidth, -16); UiAlign("left top")
+	local navId = UiNavComponent(controlWidth, 32)
+	navigationAddItem(navId)
+	local receivesInput = UiReceivesInput()
+	local focused = receivesInput and UiIsComponentInFocus(navId)
+	if receivesInput and UiIsMouseInRect(controlWidth, 32) then navigationMakeLastItemFocused() end
+	if focused then
+		if InputPressed("menu_left") or InputPressed("leftarrow") then
+			value = CDMP.RoundSlider(value - step, minimum, maximum, step); UiNavSkipUpdate()
+		elseif InputPressed("menu_right") or InputPressed("rightarrow") then
+			value = CDMP.RoundSlider(value + step, minimum, maximum, step); UiNavSkipUpdate()
+		end
+	end
+	local range = math.max(1, maximum - minimum)
+	local position = (value - minimum) / range * trackWidth
+	UiPush(); UiTranslate(0, 13); UiColor(0.5, 0.5, 0.5, 0.5); UiRoundedRect(trackWidth, 6, 3)
+	UiColor(COLOR_YELLOW); UiRoundedRect(math.max(1, position), 6, 3); UiPop()
+	UiPush(); UiTranslate(0, 16); UiAlign("center middle"); UiColor(focused and COLOR_YELLOW or COLOR_WHITE)
+	UiIgnoreNavigation()
+	local moved = UiSlider("ui/common/dot.png", "x", position, 0, trackWidth)
+	if receivesInput then value = CDMP.RoundSlider(minimum + moved / trackWidth * range, minimum, maximum, step) end
+	UiPop()
+	SetInt(field.key, value)
+	UiPush(); UiTranslate(controlWidth, 16); UiAlign("right middle"); UiColor(COLOR_WHITE)
+	UiFont(FONT_MEDIUM, FONT_SIZE_22); UiText(field.format and field.format(value) or tostring(value)); UiPop()
+	UiPop()
+	return value
+end

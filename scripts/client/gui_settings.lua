@@ -12,18 +12,17 @@ local function optionList(values, formatter)
 	return options
 end
 
-local function integers(maximum)
-	local values = {}
-	for i = 0, maximum do values[#values + 1] = i end
-	return optionList(values, tostring)
-end
-
 local function toggleOptions()
 	return {option(CDMP.Text("OFF"), 0), option(CDMP.Text("ON"), 1)}
 end
 
 local function item(path, label, options, value)
 	return {key = prefix .. string.lower(path), label = CDMP.Text(label), options = options, default = value}
+end
+
+local function sliderItem(path, label, maximum, value, formatter)
+	return {key = prefix .. string.lower(path), label = CDMP.Text(label), slider = true,
+		min = 0, max = maximum, step = 1, default = value, format = formatter}
 end
 
 local function matchItems(settings)
@@ -46,15 +45,20 @@ local function toolItems(tool, settings)
 	local value = settings.tools[tool.id]
 	return {
 		item(path .. "startEnabled", "START_TOOL", toggleOptions(), value.startEnabled and 1 or 0),
-		item(path .. "ammo", "START_AMMO", integers(100), value.ammo),
+		sliderItem(path .. "ammo", "START_AMMO", 100, value.ammo),
 		item(path .. "canLoot", "IN_LOOT", toggleOptions(), value.canLoot and 1 or 0),
-		item(path .. "lootWeight", "LOOT_WEIGHT", integers(10), value.lootWeight),
-		item(path .. "pickupAmount", "PICKUP_AMOUNT", integers(100), value.pickupAmount),
+		sliderItem(path .. "lootWeight", "LOOT_WEIGHT", 10, value.lootWeight),
+		sliderItem(path .. "pickupAmount", "PICKUP_AMOUNT", 100, value.pickupAmount),
 	}
 end
 
 local function seedItems(items)
-	for _, field in ipairs(items) do resetStepperValue(field.key, field.options, field.default) end
+	for _, field in ipairs(items) do
+		if field.slider then
+			ClearKey(field.key .. ".index")
+			SetInt(field.key, CDMP.RoundSlider(field.default, field.min, field.max, field.step))
+		else resetStepperValue(field.key, field.options, field.default) end
+	end
 end
 
 function CDMP_SetDraft(settings)
@@ -88,8 +92,11 @@ local function drawItems(items, width, rowHeight, rows)
 	for i = first, math.min(#items, first + rows - 1) do
 		local field = items[i]
 		UiPush(); UiAlign("left middle")
-		local fits, label = uiTextConstrained(field.label, "regular.ttf", 23 * FONT_SCALE, width - 252)
-		_drawSettingsItemStepper(field.key, label, fits and "" or field.label, field.options, width, false)
+		if field.slider then CDMP_DrawSlider(field, width)
+		else
+			local fits, label = uiTextConstrained(field.label, "regular.ttf", 23 * FONT_SCALE, width - 252)
+			_drawSettingsItemStepper(field.key, label, fits and "" or field.label, field.options, width, false)
+		end
 		UiPop(); UiTranslate(0, rowHeight)
 	end
 	return pages
