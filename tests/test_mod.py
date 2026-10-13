@@ -380,6 +380,108 @@ class ModTests(unittest.TestCase):
             assert(#uiStack == 0 and client.cdmpPage == 1)
         ''')
 
+    def test_tool_cards_fit_pages_and_open_with_mouse_and_navigation(self):
+        self.check(UI_MOCK)
+        self.check(GEOMETRY_MOCK)
+        self.check("""
+            client.cdmpSettingsVisible=true; client.cdmpSection=2
+            -- Include a Workshop-style tool and a literal long display name.
+            local tool={id='workshop_test',label='Very long Workshop {tool} name'}
+            table.insert(shared.cdmp.tools,tool)
+            CDMP_SetDraft(CDMP.DefaultSettings(shared.cdmp.mode,shared.cdmp.tools))
+            for _,height in ipairs({360,480,720,1080}) do
+                UiHeight=function() return height end
+                client.cdmpPage=1; client.cdmpSelectedTool=nil
+                local displayed=0
+                while true do
+                    uiCardRects,uiButtonRects,uiPanelRects={},{},{}
+                    CDMP_DrawSetup()
+                    local panel=uiPanelRects[2] -- settings, after the host menu
+                    local footerTop=panel.bottom
+                    local nextDisabled=client.cdmpPage
+                    for _,button in ipairs(uiButtonRects) do
+                        if button.label == '<' or button.label == '>' then footerTop=math.min(footerTop,button.top) end
+                    end
+                    for i,card in ipairs(uiCardRects) do
+                        assert(card.top >= panel.top and card.bottom+16 <= footerTop)
+                        assert(card.left >= panel.left and card.right <= panel.right)
+                        if i>1 then assert(uiCardRects[i-1].bottom < card.top) end
+                        displayed=displayed+1
+                    end
+                    assert(#uiCardRects >= 1 and #uiStack == 0)
+                    uiClicks['>']=true
+                    CDMP_DrawSetup()
+                    if client.cdmpPage == nextDisabled then break end
+                end
+                assert(displayed == #shared.cdmp.tools)
+                uiClicks['>']=nil
+                client.cdmpPage=1
+            end
+            function UiIsMouseInRect() return true end
+            local once=true
+            function InputPressed(key)
+                if key == 'lmb' and once then once=false; return true end
+                return false
+            end
+            CDMP_DrawSetup()
+            assert(client.cdmpSelectedTool == 1)
+            function InputPressed() return false end
+            function UiIsMouseInRect() return false end
+            uiClicks.CDMP_BACK=true; CDMP_DrawSetup()
+            assert(not client.cdmpSelectedTool and client.cdmpPage == 1)
+            client.cdmpPage=2; uiComponents=0
+            function UiIsComponentInFocus(id) return id == 'component1' end
+            function InputPressed(key) return key == 'menu_accept' end
+            CDMP_DrawSetup()
+            assert(client.cdmpSelectedTool and client.cdmpToolListPage == 2)
+            function InputPressed() return false end
+            function UiIsComponentInFocus() return false end
+            uiClicks.CDMP_BACK=true; CDMP_DrawSetup()
+            assert(not client.cdmpSelectedTool and client.cdmpPage == 2 and #uiStack == 0)
+        """)
+
+    def test_compact_preset_actions_fit_settings_footer(self):
+        self.check(UI_MOCK)
+        self.check(GEOMETRY_MOCK)
+        self.check("""
+            client.cdmpSettingsVisible=true; client.cdmpSection=4
+            for _,height in ipairs({360,480,720,1080}) do
+                UiHeight=function() return height end
+                uiCardRects,uiButtonRects,uiPanelRects={},{},{}
+                CDMP_DrawSetup()
+                local card=uiCardRects[1]
+                local actionBottom=card.bottom
+                local footerTop=UiHeight()
+                for _,button in ipairs(uiButtonRects) do
+                    if button.label == 'CDMP_RESET' or button.label == 'CDMP_CLOSE' then
+                        footerTop=math.min(footerTop,button.top)
+                    elseif button.label == 'CDMP_SAVE' or button.label == 'CDMP_LOAD' or button.label == 'CDMP_RENAME' or button.label == 'CDMP_DELETE' then
+                        assert(button.top >= card.bottom+8)
+                        actionBottom=math.max(actionBottom,button.bottom)
+                    end
+                end
+                assert(actionBottom+16 <= footerTop and #uiStack == 0)
+            end
+        """)
+
+    def test_tool_cards_show_current_draft_and_literal_names(self):
+        self.check(UI_MOCK)
+        self.check("""
+            local tool=shared.cdmp.tools[1]
+            tool.label='Workshop {literal} tool'
+            CDMP_SetDraft(shared.cdmp.settings)
+            local path='level.cdmp.draft.tools.'..CDMP.ToolStorageId(tool.id)..'.'
+            SetString(path..'startenabled','1'); SetString(path..'canloot','1'); SetInt(path..'lootweight',3)
+            local draft=CDMP_ReadDraft()
+            CDMP.DrawToolCard(1,tool,draft.tools[tool.id],620)
+            assert(uiTexts[2] == 'Workshop {literal} tool')
+            assert(uiTexts[3] == 'CDMP_TOOL_START: CDMP_ON   |   CDMP_TOOL_LOOT: CDMP_ON')
+            SetInt(path..'lootweight',0)
+            uiTexts={}; draft=CDMP_ReadDraft()
+            CDMP.DrawToolCard(1,tool,draft.tools[tool.id],620)
+            assert(uiTexts[3] == 'CDMP_TOOL_START: CDMP_ON   |   CDMP_TOOL_LOOT: CDMP_OFF')
+        """)
+
     def test_preset_names_survive_save_clear_and_reload(self):
         self.check("""
             assert(CDMP.RenamePreset(1,'  Снайперы  '))
@@ -850,7 +952,7 @@ class SourceTests(unittest.TestCase):
         keys = set(re.findall(r'CDMP.Text\("([A-Z_]+)"\)', (ROOT / "scripts/client/gui_settings.lua").read_text(encoding="utf-8")))
         for language in ("english", "russian", "french", "german", "italian", "japanese", "polish", "simplified_chinese", "spanish"):
             text = (ROOT / f"data/texts/strings_{language}.str").read_text(encoding="utf-8")
-            for key in keys | {"OVERWRITE"}:
+            for key in keys | {"OVERWRITE", "TOOL_START", "TOOL_LOOT"}:
                 self.assertRegex(text, rf'(?m)^CDMP_{key}\s+".+"$')
 
 

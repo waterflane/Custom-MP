@@ -68,3 +68,6 @@ CDMP_UNLIMITED                                "Без ограничений"
 
 
 CDMP_OVERWRITE                                "Перезаписать"
+
+CDMP_TOOL_START                               "Старт"
+CDMP_TOOL_LOOT                                "Лут"

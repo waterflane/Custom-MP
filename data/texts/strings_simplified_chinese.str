@@ -67,3 +67,6 @@ CDMP_CUSTOM_TIME                              "Custom time"
 CDMP_UNLIMITED                                "Unlimited"
 
 CDMP_OVERWRITE                                "Overwrite"
+
+CDMP_TOOL_START                               "Loadout"
+CDMP_TOOL_LOOT                                "Loot"

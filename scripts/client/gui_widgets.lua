@@ -100,11 +100,8 @@ local function drawPresetChevron()
 	UiPop()
 end
 
-function CDMP.DrawPresetCard(slot, width, selected, selector, rowHeight)
-	local height = selector and 80 or (rowHeight or 52)
-	local badgeSize = height < 44 and 24 or 32
-	local nameLeft = badgeSize + 26
-	local nameFont = height < 44 and FONT_SIZE_18 or FONT_SIZE_22
+-- Shared card frame keeps tool and preset focus/hover behavior identical.
+local function beginListCard(width, height, selected)
 	UiPush(); UiAlign("left top")
 	local navId = UiNavComponent(width, height)
 	navigationAddItem(navId)
@@ -118,6 +115,22 @@ function CDMP.DrawPresetCard(slot, width, selected, selector, rowHeight)
 	UiRoundedRect(width, height, 8)
 	UiColor(selected and COLOR_YELLOW or COLOR_WHITE)
 	if selected or hovered or focused then UiRoundedRectOutline(width, height, 8, 2) end
+	return pressed
+end
+
+local function endListCard(pressed)
+	UiPop()
+	if pressed then UiSound("ui/common/click.ogg") end
+	return pressed
+end
+
+function CDMP.DrawPresetCard(slot, width, selected, selector, rowHeight)
+	local height = rowHeight or (selector and 80 or 52)
+	local expanded = selector and height >= 64
+	local badgeSize = height < 44 and 24 or 32
+	local nameLeft = badgeSize + 26
+	local nameFont = height < 44 and FONT_SIZE_18 or FONT_SIZE_22
+	local pressed = beginListCard(width, height, selected)
 	UiPush(); UiTranslate(12, (height - badgeSize) / 2)
 	UiColor(1, 1, 1, 0.08); UiRoundedRect(badgeSize, badgeSize, 6)
 	UiTranslate(badgeSize / 2, badgeSize / 2); UiAlign("center middle"); UiFont("regular.ttf", FONT_SIZE_18)
@@ -128,20 +141,43 @@ function CDMP.DrawPresetCard(slot, width, selected, selector, rowHeight)
 	local statusWidth = math.min(UiGetTextSize(status), width * 0.35)
 	local _, statusLabel = uiTextConstrained(status, "regular.ttf", FONT_SIZE_18, statusWidth)
 	local nameWidth = selector and width - 100 or width - nameLeft - 28 - statusWidth
-	UiPush(); UiTranslate(nameLeft, selector and 26 or height / 2); UiAlign("left middle")
+	UiPush(); UiTranslate(nameLeft, expanded and 26 or height / 2); UiAlign("left middle")
 	UiColor(COLOR_WHITE); UiFont("regular.ttf", nameFont)
 	local _, name = uiTextConstrained(CDMP.GetPresetName(slot), "regular.ttf", nameFont, nameWidth)
 	UiText(name)
-	if selector then
+	if expanded then
 		UiTranslate(0, 27); UiColor(0.65, 0.7, 0.72, 1); UiFont("regular.ttf", FONT_SIZE_18); UiText(status)
 	end
 	UiPop(); UiPush(); UiTranslate(width - (selector and 32 or 16), height / 2)
 	UiColor(selected and COLOR_YELLOW or COLOR_WHITE)
 	if selector then drawPresetChevron()
 	else UiAlign("right middle"); UiFont("regular.ttf", FONT_SIZE_18); UiText(statusLabel) end
-	UiPop(); UiPop()
-	if pressed then UiSound("ui/common/click.ogg") end
-	return pressed
+	UiPop()
+	return endListCard(pressed)
+end
+
+CDMP.TOOL_CARD_HEIGHT = 64
+CDMP.TOOL_CARD_GAP = 8
+
+function CDMP.DrawToolCard(index, tool, value, width)
+	local pressed = beginListCard(width, CDMP.TOOL_CARD_HEIGHT, false)
+	UiPush(); UiTranslate(12, 16); UiColor(1, 1, 1, 0.08); UiRoundedRect(32, 32, 6)
+	UiTranslate(16, 16); UiAlign("center middle"); UiFont("regular.ttf", FONT_SIZE_18)
+	UiColor(COLOR_WHITE); UiText(tostring(index)); UiPop()
+	UiTextDisableWildcards(true)
+	UiPush(); UiTranslate(58, 19); UiAlign("left middle"); UiFont("regular.ttf", FONT_SIZE_22)
+	UiColor(COLOR_WHITE)
+	local _, name = uiTextConstrained(tool.label, "regular.ttf", FONT_SIZE_22, width - 100)
+	UiText(name)
+	local start = CDMP.Text(value.startEnabled and "ON" or "OFF")
+	local loot = CDMP.Text(value.canLoot and value.lootWeight > 0 and "ON" or "OFF")
+	local status = CDMP.Text("TOOL_START") .. ": " .. start .. "   |   " .. CDMP.Text("TOOL_LOOT") .. ": " .. loot
+	UiTranslate(0, 27); UiFont("regular.ttf", FONT_SIZE_18); UiColor(0.65, 0.7, 0.72, 1)
+	local _, displayedStatus = uiTextConstrained(status, "regular.ttf", FONT_SIZE_18, width - 100)
+	UiText(displayedStatus); UiPop()
+	UiPush(); UiTranslate(width - 28, CDMP.TOOL_CARD_HEIGHT / 2); UiRotate(90)
+	UiColor(COLOR_WHITE); drawPresetChevron(); UiPop()
+	return endListCard(pressed)
 end
 
 function CDMP.PresetListLayout(viewHeight)

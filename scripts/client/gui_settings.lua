@@ -116,27 +116,32 @@ local function drawItems(items, width, rowHeight, rows)
 	return pages
 end
 
-local function drawTools(width, rowHeight, rows)
+local function drawTools(width, availableHeight)
 	local tools = shared.cdmp.tools
+	local rowHeight = CDMP.TOOL_CARD_HEIGHT + CDMP.TOOL_CARD_GAP
+	local rows = math.max(1, math.floor((availableHeight + CDMP.TOOL_CARD_GAP) / rowHeight))
 	local pages = math.max(1, math.ceil(#tools / rows))
 	client.cdmpPage = math.floor(CDMP.Clamp(client.cdmpPage or 1, 1, pages))
 	local first = (client.cdmpPage - 1) * rows + 1
+	local settings = CDMP_ReadDraft()
 	for i = first, math.min(#tools, first + rows - 1) do
-		UiPush(); UiTranslate(width / 2, 0); UiAlign("center middle")
-		local _, label = uiTextConstrained(tools[i].label, FONT_BOLD, FONT_SIZE_22, width - 40)
-		if uiDrawSecondaryButton(label, width) then client.cdmpSelectedTool = i; client.cdmpPage = 1 end
+		UiPush(); UiAlign("left top")
+		if CDMP.DrawToolCard(i, tools[i], settings.tools[tools[i].id], width) then
+			client.cdmpSelectedTool = i; client.cdmpToolListPage = client.cdmpPage; client.cdmpPage = 1
+		end
 		UiPop(); UiTranslate(0, rowHeight)
 	end
 	return pages
 end
 
-local function drawPresets(width)
+local function drawPresets(width, availableHeight)
 	local slot = client.cdmpSelectedPreset or 1
 	local exists = CDMP.PresetExists(slot)
 	client.cdmpPage = 1
 	UiPush(); UiAlign("left top")
-	if CDMP.DrawPresetCard(slot, width, true, true) then client.cdmpModal = "list" end
-	UiTranslate(0, 108); UiAlign("center middle")
+	local selectorHeight = math.min(80, availableHeight - 96)
+	if CDMP.DrawPresetCard(slot, width, true, true, selectorHeight) then client.cdmpModal = "list" end
+	UiTranslate(0, selectorHeight + 28); UiAlign("center middle")
 	local buttonWidth = (width - 16) / 2
 	UiPush(); UiTranslate(buttonWidth / 2, 0)
 	if uiDrawPrimaryButton(CDMP.Text(exists and "OVERWRITE" or "SAVE"), buttonWidth) then
@@ -151,7 +156,7 @@ local function drawPresets(width)
 			CDMP.Notify(#missing > 0 and (CDMP.Text("MISSING_TOOLS") .. " " .. table.concat(missing, ", ")) or CDMP.Text("PRESET_LOADED"))
 		end
 	end
-	UiPop(); UiTranslate(0, 50)
+	UiPop(); UiTranslate(0, 48)
 	UiPush(); UiTranslate(buttonWidth / 2, 0)
 	if uiDrawSecondaryButton(CDMP.Text("RENAME"), buttonWidth) then CDMP.OpenPresetRename(slot) end
 	UiPop(); UiPush(); UiTranslate(width - buttonWidth / 2, 0)
@@ -165,32 +170,39 @@ end
 local function drawSettingsPanel()
 	local width, height = math.min(760, UiWidth() - 60), math.min(780, UiHeight() - 40)
 	local contentWidth, rowHeight = width - 60, 48
-	local rows = math.max(1, math.floor((height - 290) / rowHeight))
+	local compact = height < 480
+	local titleTop, tabY, contentTop = compact and 16 or 24, compact and 68 or 96, compact and 112 or 148
+	local footerY = height - (compact and 36 or 52)
+	local pageY = footerY - 60
 	local section = client.cdmpSection or 1
+	local contentBottom = (section == 4 and footerY or pageY) - 36
+	local availableHeight = contentBottom - contentTop
+	local rows = math.max(1, math.floor(availableHeight / rowHeight))
 	navigationBeginGroup("cdmpSettings", not client.cdmpModal, client.cdmpModal ~= nil)
 	if client.cdmpModal then UiDisableInput() end
 	UiMakeInteractive(); UiPush(); UiTranslate(30, 20); UiAlign("left top")
 	uiDrawPanel(width, height, 16)
-	UiTranslate(30, 34); UiColor(COLOR_WHITE); UiFont(FONT_BOLD, FONT_SIZE_30); UiText(CDMP.Text("SETTINGS"))
-	UiTranslate(0, 50)
+	UiTranslate(30, titleTop); UiColor(COLOR_WHITE); UiFont(FONT_BOLD, compact and FONT_SIZE_22 or FONT_SIZE_30); UiText(CDMP.Text("SETTINGS"))
+	UiTranslate(0, tabY - titleTop)
 	local tabWidth = (contentWidth - 30) / 4
 	for i, name in ipairs(sections) do
 		UiPush(); UiTranslate((i - 1) * (tabWidth + 10) + tabWidth / 2, 0); UiAlign("center middle")
-		if uiDrawSecondaryButton(CDMP.Text(name), tabWidth) then
-			client.cdmpSection = i; client.cdmpPage = 1; client.cdmpSelectedTool = nil
+		local _, label = uiTextConstrained(CDMP.Text(name), FONT_MEDIUM, FONT_SIZE_22, tabWidth - 8)
+		if uiDrawSecondaryButton(label, tabWidth) then
+			client.cdmpSection = i; client.cdmpPage = 1; client.cdmpSelectedTool = nil; client.cdmpToolListPage = nil
 		end
 		if i == section then UiTranslate(0, 24); UiColor(COLOR_YELLOW); UiRect(tabWidth - 10, 3) end
 		UiPop()
 	end
-	UiPush(); UiTranslate(0, 58)
+	UiPush(); UiTranslate(0, contentTop - tabY)
 	local pages = 1
-	if section == 1 then pages = drawItems(matchItems(client.cdmpDraft), contentWidth, rowHeight, rows)
-	elseif section == 3 then pages = drawItems(hudItems(client.cdmpDraft), contentWidth, rowHeight, rows)
-	elseif section == 4 then pages = drawPresets(contentWidth)
-	elseif client.cdmpSelectedTool then pages = drawItems(toolItems(shared.cdmp.tools[client.cdmpSelectedTool], client.cdmpDraft), contentWidth, rowHeight, rows)
-	else pages = drawTools(contentWidth, rowHeight, rows) end
+	if section == 1 then UiTranslate(0, 20); pages = drawItems(matchItems(client.cdmpDraft), contentWidth, rowHeight, rows)
+	elseif section == 3 then UiTranslate(0, 20); pages = drawItems(hudItems(client.cdmpDraft), contentWidth, rowHeight, rows)
+	elseif section == 4 then pages = drawPresets(contentWidth, availableHeight)
+	elseif client.cdmpSelectedTool then UiTranslate(0, 20); pages = drawItems(toolItems(shared.cdmp.tools[client.cdmpSelectedTool], client.cdmpDraft), contentWidth, rowHeight, rows)
+	else pages = drawTools(contentWidth, availableHeight) end
 	UiPop()
-	UiPush(); UiTranslate(contentWidth / 2, height - 166); UiAlign("center middle")
+	UiPush(); UiTranslate(contentWidth / 2, pageY - tabY); UiAlign("center middle")
 	if section ~= 4 then
 		UiPush(); UiTranslate(-130, 0)
 		if uiDrawSecondaryButton("<", 70, client.cdmpPage <= 1) then client.cdmpPage = client.cdmpPage - 1 end
@@ -199,11 +211,11 @@ local function drawSettingsPanel()
 		if uiDrawSecondaryButton(">", 70, client.cdmpPage >= pages) then client.cdmpPage = client.cdmpPage + 1 end
 		UiPop()
 	end
-	UiTranslate(0, 48)
+	UiTranslate(0, footerY - pageY)
 	local buttonWidth = (contentWidth - 20) / 2
 	UiPush(); UiTranslate(-(buttonWidth + 20) / 2, 0)
 	if client.cdmpSelectedTool then
-		if uiDrawSecondaryButton(CDMP.Text("BACK"), buttonWidth) then client.cdmpSelectedTool = nil; client.cdmpPage = 1 end
+		if uiDrawSecondaryButton(CDMP.Text("BACK"), buttonWidth) then client.cdmpSelectedTool = nil; client.cdmpPage = client.cdmpToolListPage or 1 end
 	elseif uiDrawSecondaryButton(CDMP.Text("RESET"), buttonWidth) then
 		CDMP_SetDraft(CDMP.DefaultSettings(shared.cdmp.mode, shared.cdmp.tools))
 	end
