@@ -1,27 +1,27 @@
 [customdeathmatchmp]
-name = Custom Deathmatch MP
-en_name = Custom Deathmatch MP
-ru_name = Custom Deathmatch MP
-description = Vanilla Deathmatch with configurable loadouts, weighted loot and five shared presets.
-en_description = Vanilla Deathmatch with configurable loadouts, weighted loot and five shared presets.
-ru_description = Ванильный Deathmatch с настраиваемыми инструментами, лутом и пятью общими пресетами.
+name = Custom MP: Deathmatch
+en_name = Custom MP: Deathmatch
+ru_name = Custom MP: Deathmatch
+description = Vanilla Deathmatch with configurable loadouts, loot and shared presets.
+en_description = Vanilla Deathmatch with configurable loadouts, loot and shared presets.
+ru_description = Ванильный Deathmatch с настройками инструментов, лута и общими пресетами.
 path = cdmp.lua
 preview = td_icon.jpg
 
 [customteamdeathmatchmp]
-name = Custom Team Deathmatch MP
-en_name = Custom Team Deathmatch MP
-ru_name = Custom Team Deathmatch MP
-en_description = Vanilla Team Deathmatch with configurable loadouts, weighted loot and five shared presets.
-ru_description = Ванильный командный Deathmatch с настраиваемыми инструментами, лутом и пятью общими пресетами.
+name = Custom MP: Team Deathmatch
+en_name = Custom MP: Team Deathmatch
+ru_name = Custom MP: Командный Deathmatch
+en_description = Vanilla Team Deathmatch with configurable loadouts, loot and shared presets.
+ru_description = Ванильный командный Deathmatch с настройками инструментов, лута и общими пресетами.
 path = teamdeathmatch.lua
 preview = teamdeathmatch_thumb.jpg
 
 [customcapturetheflagmp]
-name = Custom Capture the Flag MP
-en_name = Custom Capture the Flag MP
-ru_name = Custom Capture the Flag MP
-en_description = Vanilla Capture the Flag with configurable loadouts, weighted loot and five shared presets.
-ru_description = Ванильный захват флага с настраиваемыми инструментами, лутом и пятью общими пресетами.
+name = Custom MP: Capture the Flag
+en_name = Custom MP: Capture the Flag
+ru_name = Custom MP: Захват флага
+en_description = Vanilla Capture the Flag with configurable loadouts, loot and shared presets.
+ru_description = Ванильный захват флага с настройками инструментов, лута и общими пресетами.
 path = capturetheflag.lua
 preview = capturetheflag_thumb.jpg

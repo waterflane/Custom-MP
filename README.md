@@ -1,6 +1,6 @@
-# Custom Deathmatch MP
+# Custom MP
 
-Configurable versions of Teardown's official Multiplayer Classics modes:
+Vanilla DM, TDM and CTF with configurable loadouts, loot, HUD and five shared presets.
 
 | Mode | Identifier | Default match time | Respawn delay |
 | --- | --- | --- | --- |
@@ -23,7 +23,7 @@ Settings are applied together when the host presses **Start** and cannot be chan
 
 Vanilla starting equipment is a gun with 7 rounds, sledge, spraycan and extinguisher, with the gun selected. Headshot multiplier defaults to 1.0; extra combat overlays default to off. Existing saved settings from earlier versions do not enable them automatically.
 
-The loot pool keeps the previous CDMP tool weights and uses the same pool at all official low/medium/high spawn points. Official spawn-point generation, interaction pickup, weapon drops and 20-second crate respawn remain in use. A zero weight excludes a tool; an entirely empty pool produces no crates. Starting with no tools is supported. Pickup ammo of zero is preserved.
+The loot pool uses configurable tool weights and the same pool at all official low/medium/high spawn points. Official spawn-point generation, interaction pickup, weapon drops and 20-second crate respawn remain in use. A zero weight excludes a tool; an entirely empty pool produces no crates. Starting with no tools is supported. Pickup ammo of zero is preserved.
 
 Active vanilla and Workshop tools come from `game.tool`. Custom tools start disabled and with zero loot weight until configured. Internal CTF flag tools never appear in the settings or loot pool.
 
@@ -39,20 +39,20 @@ Missing Workshop tools are skipped with a message. Loading never changes the sav
 
 ## Installation
 
-Copy this folder to `Documents/Teardown/mods/Custom Deathmatch MP` and enable the local mod. The existing Deathmatch identifier is retained. Do not commit `id.txt`; it links the local folder to a Steam Workshop item.
+Place this mod's folder under `Documents/Teardown/mods/` and enable **Custom MP**. The existing game-mode identifiers are retained. Do not commit `id.txt`; it links the local folder to a Steam Workshop item.
 
 ## Testing from the editor / Тестирование из редактора
 
 This is a global game-mode mod, not a map: there is no root `main.xml` to open. The editor's Open/Save level dialogs list level files/folders, not the registered game modes. Open a separate test map in the editor instead.
 
-1. Enable **Custom Deathmatch MP** in the Mod Manager's local mods list, then reopen the editor/game if necessary to refresh metadata.
+1. Enable **Custom MP** in the Mod Manager's local mods list, then reopen the editor/game if necessary to refresh metadata.
 2. Open a map made for version 2 (`version = 2` in that map's `info.txt`). Press **F5** to play it.
-3. Open **Esc → Game Modes / Игровые режимы** and select **Custom Deathmatch MP**, **Custom Team Deathmatch MP** or **Custom Capture the Flag MP**. Then set up the match as host and press Start. **F4** returns to the editor.
+3. Open **Esc → Game Modes / Игровые режимы** and select **Custom MP: Deathmatch**, **Custom MP: Team Deathmatch** or **Custom MP: Capture the Flag**. Then set up the match as host and press Start. **F4** returns to the editor.
 4. For a local two/four-player test, select a local version-2 map in the Mod Manager and press **Play / Играть**. The play-options dialog includes the active mod's game modes and a **Number of Players / Количество игроков** choice for 1, 2 or 4 local players.
 
 `info.txt` must use `version = 2`: this is the engine's mod format, not the mod's release number (`CDMP.VERSION`). Real online sessions require published Workshop mods; use local testing during development.
 
-**Русский:** включите локальный мод, откройте в редакторе другую карту версии 2, запустите её через F5 и выберите режим через Esc → «Игровые режимы». Сам CDMP не содержит карты, поэтому искать его как уровень в File → Open не нужно. Для проверки с несколькими локальными игроками запускайте карту кнопкой «Играть» в менеджере модов и выбирайте количество игроков.
+**Русский:** включите локальный мод Custom MP, откройте в редакторе другую карту версии 2, запустите её через F5 и выберите режим через Esc → «Игровые режимы». Custom MP не содержит карты, поэтому искать его как уровень в File → Open не нужно. Для проверки с несколькими локальными игроками запускайте карту кнопкой «Играть» в менеджере модов и выбирайте количество игроков.
 
 ## Development and validation
 

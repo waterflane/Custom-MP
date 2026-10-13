@@ -1,10 +1,10 @@
-name = Custom Deathmatch MP
-en_name = Custom Deathmatch MP
-ru_name = Custom Deathmatch MP
+name = Custom MP
+en_name = Custom MP
+ru_name = Custom MP
 author = WaterFlane
-description = Vanilla Deathmatch, Team Deathmatch and Capture the Flag with configurable loadouts, weighted loot and five shared presets.
-en_description = Vanilla Deathmatch, Team Deathmatch and Capture the Flag with configurable loadouts, weighted loot and five shared presets.
-ru_description = Ванильные Deathmatch, командный Deathmatch и захват флага с настройками инструментов, лута и пятью общими пресетами.
+description = Vanilla DM, TDM and CTF with configurable loadouts, loot, HUD and five shared presets.
+en_description = Vanilla DM, TDM and CTF with configurable loadouts, loot, HUD and five shared presets.
+ru_description = Ванильные DM, TDM и CTF с настройками инструментов, лута, HUD и пятью общими пресетами.
 tags = GameMode
 multiplayer = true
 version = 2
