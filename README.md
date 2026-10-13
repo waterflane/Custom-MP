@@ -54,6 +54,8 @@ This is a global game-mode mod, not a map: there is no root `main.xml` to open. 
 
 **Русский:** включите локальный мод Custom MP, откройте в редакторе другую карту версии 2, запустите её через F5 и выберите режим через Esc → «Игровые режимы». Custom MP не содержит карты, поэтому искать его как уровень в File → Open не нужно. Для проверки с несколькими локальными игроками запускайте карту кнопкой «Играть» в менеджере модов и выбирайте количество игроков.
 
+Input hints use current keyboard bindings from the public settings registry and retain gamepad glyphs.
+
 ## Development and validation
 
 Entry points are `cdmp.lua`, `teamdeathmatch.lua` and `capturetheflag.lua`. Each includes `scripts/shared/custom.lua`, which connects shared configuration, presets, server settings and optional combat feedback. The official `dm_spawn.lua` and `tdm_spawn.lua` remain separate; CTF uses `mplib/spawn.lua`.

@@ -363,6 +363,34 @@ class ModTests(unittest.TestCase):
         ''')
 
 
+class InputHintTests(unittest.TestCase):
+    def test_public_key_bindings_and_fallbacks(self):
+        lua = LuaRuntime()
+        lua.execute(MOCK)
+        lua.execute(UI_MOCK)
+        lua.execute(stripped(ROOT / "mplib/inputactions.lua"))
+        lua.execute(r'''
+            internalCalls, measured = 0, {}
+            function GetKeyByAction() internalCalls=internalCalls+1; error('engine-only API') end
+            UI_DEVICE_GAMEPAD=1
+            function LastInputDevice() return 0 end
+            function UiGetTextSize(text) measured[#measured+1]=text; return #text*10,20,0,0 end
+            SetString('options.input.keymap.interact','K')
+            inputActionsMeasureInline('interact')
+            assert(measured[#measured] == 'K' and internalCalls == 0)
+            inputActionsMeasureInline('unboundaction')
+            assert(measured[#measured] == 'Unboundaction')
+            SetString('options.input.keymap.interact','space')
+            inputActionsMeasureInline('interact')
+            assert(measured[#measured]:find('space.png',1,true))
+            inputActionsMeasureInline('lmb')
+            assert(measured[#measured]:find('lmb.png',1,true))
+            function LastInputDevice() return UI_DEVICE_GAMEPAD end
+            inputActionsMeasureInline('interact')
+            assert(measured[#measured]:find('player:interact',1,true) and internalCalls == 0)
+        ''')
+
+
 class SourceTests(unittest.TestCase):
     def test_multiplayer_metadata_version(self):
         # info.txt version is the engine format, not the CDMP release number.

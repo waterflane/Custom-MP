@@ -50,8 +50,6 @@ local INPUT_KEY_EXCEPTION_ICONS = {
 	tab = "tab.png",
 }
 
-local _inputActionsKeyLookupMismatchReported = {}
-
 local function inputActionsTrim(str)
 	return tostring(str):match("^%s*(.-)%s*$")
 end
@@ -111,35 +109,9 @@ local function inputActionsMakeKeyIcon(key, iconSize)
 end
 
 local function inputActionsGetKeyByAction(action)
-	if action == nil or action == "" then
-		return ""
-	end
-
-	local registryKey = GetString("options.input.keymap." .. action)
-	if registryKey == nil then
-		registryKey = ""
-	end
-
-	registryKey = string.lower(registryKey)
-
-	if type(GetKeyByAction) == "function" then
-		local internalKey = GetKeyByAction(action) or ""
-		internalKey = string.lower(internalKey)
-
-		if internalKey ~= registryKey then
-			local mismatchId = action .. "|" .. registryKey .. "|" .. internalKey
-			if not _inputActionsKeyLookupMismatchReported[mismatchId] then
-				_inputActionsKeyLookupMismatchReported[mismatchId] = true
-				print(string.format("inputactions keymap mismatch for '%s': registry='%s' internal='%s'", action, registryKey, internalKey))
-			end
-		end
-
-		if internalKey ~= "" then
-			return internalKey
-		end
-	end
-
-	return registryKey
+	if action == nil or action == "" then return "" end
+	-- GetKeyByAction is engine-only. The public registry contains current bindings.
+	return string.lower(GetString("options.input.keymap." .. action) or "")
 end
 
 local function inputActionsResolveKeyboardToken(token, iconSize)
@@ -505,7 +477,7 @@ end
 -- `spectateAppendInputActions(actions)`
 -- `inputActionsDraw(actions)`
 --
--- Logical actions are resolved through `GetKeyByAction()` on keyboard/mouse and
+-- Logical actions are resolved through `options.input.keymap` on keyboard/mouse and
 -- use `player:<action>` icons on gamepad. Physical inputs can be forced with
 -- keys such as `key:e`, `lmb`, `rmb`, `mmb`, `wheel`, `menu:*`, or `player:*`.
 --
