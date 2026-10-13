@@ -9,6 +9,7 @@ function CDMP.OpenPresetRename(slot)
 	client.cdmpSelectedPreset = slot
 	client.cdmpNameBuffer = CDMP.GetPresetName(slot)
 	client.cdmpNameSelectAll = true
+	client.cdmpNameUpper = false
 	client.cdmpNameLanguage = client.cdmpNameLanguage or "en"
 	client.cdmpModal = "rename"
 end
@@ -52,19 +53,23 @@ local function symbols(text)
 	for char in text:gmatch("[%z\1-\127\194-\244][\128-\191]*") do result[#result + 1] = char end
 	return result
 end
-local russianMap, upperRussian = {}, {}
+local russianMap, upperRussian, lowerRussian = {}, {}, {}
 for i = 2, 4 do
 	local en, ru = symbols(englishRows[i]), symbols(russianRows[i])
 	for j, char in ipairs(en) do russianMap[char] = ru[j] end
 end
 russianMap["`"] = "ё"
 local lower, upper = symbols("абвгдеёжзийклмнопрстуфхцчшщъыьэюя"), symbols("АБВГДЕЁЖЗИЙКЛМНОПРСТУФХЦЧШЩЪЫЬЭЮЯ")
-for i, char in ipairs(lower) do upperRussian[char] = upper[i] end
+for i, char in ipairs(lower) do
+	upperRussian[char] = upper[i]; lowerRussian[upper[i]] = char
+end
 local function uppercase(char)
 	return upperRussian[char] or string.upper(char)
 end
 
 function CDMP.PresetNameKey(key)
+	-- The engine reports key identifiers, which can be uppercase regardless of Shift.
+	key = lowerRussian[key] or string.lower(key)
 	if key == "backspace" then CDMP.BackspacePresetName(); return end
 	if key == "delete" then client.cdmpNameBuffer = ""; client.cdmpNameSelectAll = false; return end
 	if key == "capslock" then client.cdmpNameUpper = not client.cdmpNameUpper; return end
@@ -84,35 +89,19 @@ local function drawRename(width)
 	UiPush(); UiAlign("left top")
 	UiColor(client.cdmpNameSelectAll and COLOR_YELLOW or COLOR_WHITE)
 	UiRoundedRectOutline(width, 46, 6, 2)
-	UiTranslate(10, 9); UiFont(FONT_MEDIUM, FONT_SIZE_22)
-	local _, name = uiTextConstrained((client.cdmpNameBuffer or "") .. "|", FONT_MEDIUM, FONT_SIZE_22, width - 20)
+	UiTranslate(10, 9); UiFont("regular.ttf", FONT_SIZE_22)
+	local _, name = uiTextConstrained((client.cdmpNameBuffer or "") .. "|", "regular.ttf", FONT_SIZE_22, width - 20)
 	UiText(name); UiPop()
-	UiTranslate(0, 68)
-	local rows = client.cdmpNameLanguage == "ru" and russianRows or englishRows
-	local cell = (width - 11 * 4) / 12
-	for _, row in ipairs(rows) do
-		for i, char in ipairs(symbols(row)) do
-			if client.cdmpNameUpper then char = uppercase(char) end
-			UiPush(); UiTranslate((i - 1) * (cell + 4) + cell / 2, 0); UiAlign("center middle")
-			if uiDrawSecondaryButton(char, cell) then CDMP.AppendPresetName(char) end
-			UiPop()
-		end
-		UiTranslate(0, 44)
+	UiTranslate(0, 72)
+	UiPush(); UiTranslate(48, 0); UiAlign("center middle")
+	if uiDrawSecondaryButton(client.cdmpNameLanguage == "ru" and "RU" or "EN", 96) then
+		client.cdmpNameLanguage = client.cdmpNameLanguage == "ru" and "en" or "ru"
 	end
-	local controls = {
-		{label = client.cdmpNameLanguage == "ru" and "RU" or "EN", click = function() client.cdmpNameLanguage = client.cdmpNameLanguage == "ru" and "en" or "ru" end},
-		{label = "Aa", click = function() client.cdmpNameUpper = not client.cdmpNameUpper end},
-		{label = CDMP.Text("SPACE"), click = function() CDMP.AppendPresetName(" ") end},
-		{label = CDMP.Text("BACKSPACE"), click = CDMP.BackspacePresetName},
-		{label = CDMP.Text("CLEAR_NAME"), click = function() client.cdmpNameBuffer = ""; client.cdmpNameSelectAll = false end},
-	}
-	local controlWidth = (width - 4 * 6) / 5
-	for i, control in ipairs(controls) do
-		UiPush(); UiTranslate((i - 1) * (controlWidth + 6) + controlWidth / 2, 0); UiAlign("center middle")
-		if uiDrawSecondaryButton(control.label, controlWidth) then control.click() end
-		UiPop()
-	end
-	UiTranslate(0, 56)
+	UiPop()
+	UiPush(); UiTranslate(112, 0); UiAlign("left middle"); UiFont("regular.ttf", FONT_SIZE_18)
+	local _, hint = uiTextConstrained(CDMP.Text("NAME_INPUT_HINT"), "regular.ttf", FONT_SIZE_18, width - 112)
+	UiText(hint); UiPop()
+	UiTranslate(0, 62)
 	local buttonWidth = (width - 12) / 2
 	UiPush(); UiTranslate(buttonWidth / 2, 0); UiAlign("center middle")
 	if uiDrawPrimaryButton(CDMP.Text("CONFIRM"), buttonWidth) then CDMP.ConfirmPresetRename() end
@@ -135,7 +124,7 @@ function CDMP_DrawPresetModal()
 		CDMP.PresetNameKey(key)
 	end
 	local width = math.min(700, UiWidth() - 40)
-	local height = modal == "rename" and 424 or 384
+	local height = modal == "rename" and 262 or 384
 	navigationBeginGroup(modal == "rename" and "cdmpRename" or "cdmpPresetList", true)
 	UiMakeInteractive(); UiPush()
 	UiAlign("left top"); UiColor(0, 0, 0, 0.65); UiRect(UiWidth(), UiHeight())

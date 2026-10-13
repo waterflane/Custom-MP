@@ -378,6 +378,39 @@ class ModTests(unittest.TestCase):
             assert(CDMP.GetPresetName(2) == 'Мой пресет' and not client.cdmpModal and #uiStack == 0)
         """)
 
+    def test_physical_preset_name_input_case_and_layout(self):
+        self.check(UI_MOCK)
+        self.check("""
+            CDMP.OpenPresetRename(1)
+            CDMP.PresetNameKey('Q'); CDMP.PresetNameKey('W')
+            assert(client.cdmpNameBuffer == 'qw')
+            function InputDown(key) return key == 'shift' end
+            CDMP.PresetNameKey('e')
+            assert(client.cdmpNameBuffer == 'qwE')
+            function InputDown() return false end
+            CDMP.PresetNameKey('capslock'); CDMP.PresetNameKey('r')
+            assert(client.cdmpNameBuffer == 'qwER')
+            function InputDown(key) return key == 'shift' end
+            CDMP.PresetNameKey('T')
+            assert(client.cdmpNameBuffer == 'qwERt')
+            function InputDown() return false end
+            CDMP.OpenPresetRename(2); client.cdmpNameLanguage='ru'
+            CDMP.PresetNameKey('Q'); CDMP.PresetNameKey('Ц')
+            assert(client.cdmpNameBuffer == 'йц')
+            function InputDown(key) return key == 'shift' end
+            CDMP.PresetNameKey('W')
+            assert(client.cdmpNameBuffer == 'йцЦ')
+            function InputDown(key) return key == 'ctrl' end
+            CDMP.PresetNameKey('A')
+            assert(client.cdmpNameSelectAll)
+            function InputDown() return false end
+            CDMP.PresetNameKey('backspace')
+            assert(client.cdmpNameBuffer == '')
+            CDMP_DrawPresetModal()
+            assert(#uiStack == 0)
+            for _, text in ipairs(uiTexts) do assert(text ~= 'q' and text ~= 'й') end
+        """)
+
     def test_tool_slider_rounding_focus_and_disabled_input(self):
         self.check(UI_MOCK)
         self.check("""
