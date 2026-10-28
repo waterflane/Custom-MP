@@ -204,7 +204,7 @@ class ModTests(unittest.TestCase):
         self.lua.execute(MOCK)
         for filename in (
             "shared/config.lua", "shared/world.lua", "shared/presets.lua",
-            "server/settings.lua", "server/combat.lua", "client/gui.lua",
+            "server/settings.lua", "server/combat.lua", "client/visibility.lua", "client/gui.lua",
             "client/gui_widgets.lua", "client/gui_notices.lua", "client/gui_settings.lua", "client/gui_combat.lua",
         ):
             self.lua.execute(stripped(ROOT / "scripts" / filename))
@@ -285,6 +285,72 @@ class ModTests(unittest.TestCase):
             SetInt('savegame.mod.cdmp.presets.1.version',99)
             assert(not CDMP.PresetExists(1) and CDMP.LoadPreset(1) == nil)
         ''')
+
+    def test_map_and_teammate_settings_presets_and_legacy_defaults(self):
+        self.check("""
+            for _,mode in ipairs({'dm','tdm','ctf'}) do
+                local defaults=CDMP.DefaultSettings(mode,server.cdmpTools)
+                assert(defaults.hud.map and defaults.hud.teammateMarkers)
+                local invalid=CDMP.ValidateSettings({hud={map='false',teammateMarkers=0}},mode,server.cdmpTools)
+                assert(invalid.hud.map and invalid.hud.teammateMarkers)
+                defaults.hud.map=false; defaults.hud.teammateMarkers=false
+                defaults.hud.nameplates=true
+                CDMP.SavePreset(1,defaults)
+                local saved=CDMP.LoadPreset(1)
+                assert(saved.hud.map == false and saved.hud.teammateMarkers == false)
+                local prepared=CDMP.PreparePreset(saved,mode,server.cdmpTools)
+                assert(not prepared.hud.map and not prepared.hud.teammateMarkers and prepared.hud.nameplates)
+                shared._hud.gameIsSetup=false; CDMP_ServerInit(mode,{{Transform()}})
+                server.settingsApplyAndStart(1,prepared)
+                assert(not shared.cdmp.settings.hud.map and not shared.cdmp.settings.hud.teammateMarkers)
+                ClearKey('savegame.mod.cdmp.presets.1.hud.map')
+                ClearKey('savegame.mod.cdmp.presets.1.hud.teammatemarkers')
+                local legacy=CDMP.PreparePreset(CDMP.LoadPreset(1),mode,server.cdmpTools)
+                assert(legacy.hud.map and legacy.hud.teammateMarkers and legacy.hud.nameplates)
+            end
+        """)
+
+    def test_map_policy_keeps_tab_input_and_other_mod_map_restrictions(self):
+        self.check("""
+            function InputClear() error('Tab or other input must not be consumed') end
+            function DisablePlayerInput() error('Player input must not be disabled') end
+            function InputDown(key) return key == 'tab' end
+            SetString('options.input.keymap.map','tab')
+            SetString('options.input.keymap.othermod','tab')
+            shared.cdmp.settings.hud.map=false
+            CDMP.ApplyMapVisibility()
+            assert(GetBool('game.disablemap') and InputDown('tab'))
+            assert(GetString('options.input.keymap.map') == 'tab' and GetString('options.input.keymap.othermod') == 'tab')
+            shared.cdmp.settings.hud.map=true
+            CDMP.ApplyMapVisibility()
+            assert(GetBool('game.disablemap')) -- preserve another mod's restriction
+            ClearKey('game.disablemap'); CDMP.ApplyMapVisibility()
+            assert(not HasKey('game.disablemap'))
+        """)
+
+    def test_hud_controls_are_independent_and_seed_hidden_team_setting(self):
+        self.check(UI_MOCK)
+        self.check("""
+            for _,mode in ipairs({'dm','tdm','ctf'}) do
+                shared._hud.gameIsSetup=false; CDMP_ServerInit(mode,{{Transform()}})
+                local s=CDMP.Copy(shared.cdmp.settings)
+                s.hud.map=false; s.hud.teammateMarkers=false; s.hud.nameplates=true
+                CDMP_SetDraft(s)
+                client.cdmpSettingsVisible=true; client.cdmpSection=3; client.cdmpPage=1
+                uiSteppers={}; CDMP_DrawSetup()
+                local map,team=false,false
+                for _,key in ipairs(uiSteppers) do
+                    map=map or key == 'level.cdmp.draft.hud.map'
+                    team=team or key == 'level.cdmp.draft.hud.teammatemarkers'
+                end
+                assert(map and team == (mode ~= 'dm'))
+                local draft=CDMP_ReadDraft()
+                assert(not draft.hud.map and not draft.hud.teammateMarkers and draft.hud.nameplates)
+                CDMP_SetDraft(CDMP.DefaultSettings(mode,shared.cdmp.tools))
+                draft=CDMP_ReadDraft()
+                assert(draft.hud.map and draft.hud.teammateMarkers)
+            end
+        """)
 
     def test_atomic_host_start_and_lock(self):
         self.check('''
@@ -859,6 +925,147 @@ class SourceTests(unittest.TestCase):
         info = (ROOT / "info.txt").read_text(encoding="utf-8")
         self.assertRegex(info, r"(?m)^version\s*=\s*2\s*$")
 
+    def marker_runtime(self, filename, mode):
+        lua=LuaRuntime()
+        lua.execute(MOCK)
+        lua.execute(expand(ROOT/filename))
+        lua.execute(UI_MOCK)
+        lua.globals().testMode=mode
+        lua.execute("""
+            function GetAllPlayers() return {1,2,3,4} end
+            function Players()
+                local i=0
+                return function() i=i+1; return GetAllPlayers()[i] end
+            end
+            viewer=1
+            function GetLocalPlayer() return viewer end
+            function IsPlayerLocal(p) return p == viewer end
+            function IsPlayerValid(p) return p >= 1 and p <= 4 end
+            function IsPlayerDisabled() return false end
+            function GetPlayerHealth() return 1 end
+            function GetPlayerUp() return Vec(0,1,0) end
+            function VecScale(v,s) return Vec(v[1]*s,v[2]*s,v[3]*s) end
+            function GetPlayerTransform(p) return Transform(Vec(p*10,0,0)) end
+            function GetBodyTransform(id) return Transform(Vec(id,0,0)) end
+            function TransformToParentTransform(a,b) return Transform(VecAdd(a.pos,b.pos)) end
+            function GetPlayerName(p) return 'Player '..p end
+            function GetPlayerCharacter() return 0 end
+            function teamsGetTeamId(p) return p <= 2 and 1 or 2 end
+            function teamsGetTeamPlayers(id) return id == 1 and {1,2} or {3,4} end
+            function teamsGetColor(id) return Vec(id,0,0) end
+            function teamsGetName(id) return 'Team '..id end
+            function teamsGetPlayerColorsList() return {} end
+            function teamsIsSetup() return true end
+            function hudDrawTitle() end
+            function hudDrawBanner() end
+            function hudDrawGameModeHelpText() end
+            function eventlogDraw() end
+            function hudDrawScore2Teams() end
+            function statsGetDeaths() return 0 end
+            function countdownGetTime() return 0 end
+            function countdownDraw() return true end
+            function hudTick() end
+            function spectateTick() end
+            function teamsSetTags() end
+            function SetLowHealthBlurThreshold() end
+            function GetPlayerTool() return 'gun' end
+            function CDMP.DrawMatchTimer() end
+            calls.mapMarkers={}; calls.worldMarkers={}
+            function AddMapMarker(...) calls.mapMarkers[#calls.mapMarkers+1]={...} end
+            function hudDrawWorldMarkers(markers)
+                for _,marker in ipairs(markers) do calls.worldMarkers[#calls.worldMarkers+1]=marker end
+            end
+            shared.cdmp={mode=testMode,settings=CDMP.DefaultSettings(testMode,{})}
+            shared._hud.gameIsSetup=true; shared.time=300
+            shared.bases={101,102}
+            shared.flags={{body=103,atBase=true},{body=104,atBase=true}}
+            shared.score={0,0}
+        """)
+        return lua
+
+    def test_map_switch_runs_in_all_modes_on_tick_and_draw(self):
+        for filename,mode in (('cdmp.lua','dm'),('teamdeathmatch.lua','tdm'),('capturetheflag.lua','ctf')):
+            with self.subTest(mode=mode):
+                lua=self.marker_runtime(filename,mode)
+                lua.execute("""
+                    function InputDown(key) return key == 'tab' end
+                    function InputClear() error('Unexpected input clearing') end
+                    shared.cdmp.settings.hud.map=false
+                    client.tick(0.016)
+                    assert(GetBool('game.disablemap') and InputDown('tab'))
+                    ClearKey('game.disablemap')
+                    client.draw(0.016)
+                    assert(GetBool('game.disablemap') and InputDown('tab'))
+                    shared.cdmp.settings.hud.map=true
+                    ClearKey('game.disablemap'); client.tick(0.016); client.draw(0.016)
+                    assert(not GetBool('game.disablemap') and InputDown('tab'))
+                """)
+
+    def test_team_markers_hide_only_allies_in_both_team_modes(self):
+        for filename,mode in (('teamdeathmatch.lua','tdm'),('capturetheflag.lua','ctf')):
+            with self.subTest(mode=mode):
+                lua=self.marker_runtime(filename,mode)
+                lua.execute("""
+                    for _,localPlayer in ipairs({1,3}) do
+                        viewer=localPlayer
+                        local ally=viewer == 1 and 2 or 4
+                        local enemy=viewer == 1 and 3 or 1
+                        shared.cdmp.settings.hud.nameplates=true
+                        shared.cdmp.settings.hud.teammateMarkers=true
+                        calls.mapMarkers={}; calls.worldMarkers={}
+                        client.draw(0.016)
+                        local foundWorld,foundMap=false,false
+                        for _,marker in ipairs(calls.worldMarkers) do foundWorld=foundWorld or marker.player == ally end
+                        for _,marker in ipairs(calls.mapMarkers) do
+                            foundMap=foundMap or ((marker[2] == 'player' or marker[2] == 'member') and marker[1] == ally)
+                        end
+                        assert(foundWorld and foundMap)
+                        shared.cdmp.settings.hud.teammateMarkers=false
+                        calls.mapMarkers={}; calls.worldMarkers={}
+                        client.draw(0.016)
+                        local foundEnemy,objectives=false,0
+                        for _,marker in ipairs(calls.worldMarkers) do
+                            assert(marker.player ~= ally and marker.label ~= 'Player '..ally)
+                            foundEnemy=foundEnemy or (marker.player == enemy and marker.label == 'Player '..enemy)
+                            if marker.icon == 'MOD/gfx/flagbase.png' or marker.icon == 'MOD/gfx/base.png' then objectives=objectives+1 end
+                        end
+                        assert(foundEnemy and (testMode ~= 'ctf' or objectives >= 2))
+                        for _,marker in ipairs(calls.mapMarkers) do assert(marker[2] ~= 'player' and marker[2] ~= 'member') end
+                        shared.cdmp.settings.hud.teammateMarkers=true; shared.cdmp.settings.hud.nameplates=false
+                        calls.mapMarkers={}; calls.worldMarkers={}; client.draw(0.016)
+                        for _,marker in ipairs(calls.worldMarkers) do if marker.player then assert(not marker.label) end end
+                        for _,marker in ipairs(calls.mapMarkers) do
+                            if marker[2] == 'player' or marker[2] == 'member' then assert(marker[3] == '' and marker[5] == false) end
+                        end
+                    end
+                """)
+
+    def test_hidden_allied_flag_carrier_keeps_only_ctf_objective(self):
+        lua=self.marker_runtime('capturetheflag.lua','ctf')
+        lua.execute("""
+            shared.cdmp.settings.hud.teammateMarkers=false
+            for _,flagId in ipairs({1,2}) do
+                shared.flags={{body=103,atBase=true},{body=104,atBase=true}}
+                shared.flags[flagId].atBase=false; shared.flags[flagId].carriedByPlayer=2
+                calls.mapMarkers={}; calls.worldMarkers={}; client.draw(0.016)
+                local objective=false
+                for _,marker in ipairs(calls.worldMarkers) do
+                    assert(marker.player ~= 2 and marker.label ~= 'Player 2')
+                    if marker.icon == 'MOD/gfx/flag.png' and marker.pos[1] == 20 then
+                        assert(not marker.label and not marker.player)
+                        objective=true
+                    end
+                end
+                assert(objective)
+                local mapFlag=false
+                for _,marker in ipairs(calls.mapMarkers) do
+                    assert(marker[2] ~= 'member')
+                    mapFlag=mapFlag or (marker[1] == flagId and marker[2] == 'flag')
+                end
+                assert(mapFlag)
+            end
+        """)
+
     def test_full_modes_initialize_with_official_spawn_systems(self):
         for filename, mode in (("cdmp.lua", "dm"), ("teamdeathmatch.lua", "tdm"), ("capturetheflag.lua", "ctf")):
             with self.subTest(mode=mode):
@@ -973,7 +1180,7 @@ class SourceTests(unittest.TestCase):
         keys = set(re.findall(r'CDMP.Text\("([A-Z_]+)"\)', (ROOT / "scripts/client/gui_settings.lua").read_text(encoding="utf-8")))
         for language in ("english", "russian", "french", "german", "italian", "japanese", "polish", "simplified_chinese", "spanish"):
             text = (ROOT / f"data/texts/strings_{language}.str").read_text(encoding="utf-8")
-            for key in keys | {"OVERWRITE", "TOOL_START", "TOOL_LOOT"}:
+            for key in keys | {"OVERWRITE", "TOOL_START", "TOOL_LOOT", "MAP", "TEAMMATE_MARKERS"}:
                 self.assertRegex(text, rf'(?m)^CDMP_{key}\s+".+"$')
 
 

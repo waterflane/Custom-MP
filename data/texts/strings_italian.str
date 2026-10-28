@@ -70,3 +70,6 @@ CDMP_OVERWRITE                                "Overwrite"
 
 CDMP_TOOL_START                               "Loadout"
 CDMP_TOOL_LOOT                                "Loot"
+
+CDMP_MAP                                      "Map (Tab)"
+CDMP_TEAMMATE_MARKERS                         "Teammate markers"

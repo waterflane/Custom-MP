@@ -112,6 +112,7 @@ end
 
 
 function client.tick(dt)
+	CDMP.ApplyMapVisibility()
 
 	hudTick(dt)
 	SetLowHealthBlurThreshold(0.25)
@@ -181,6 +182,7 @@ local function drawMode(dt)
 end
 
 function client.draw(dt)
+	CDMP.ApplyMapVisibility()
 	drawMode(dt)
 	CDMP_DrawNotices()
 end

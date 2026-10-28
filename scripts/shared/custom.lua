@@ -4,6 +4,7 @@
 #include "presets.lua"
 #include "../server/settings.lua"
 #include "../server/combat.lua"
+#include "../client/visibility.lua"
 #include "../client/gui.lua"
 #include "../client/gui_widgets.lua"
 #include "../client/gui_notices.lua"

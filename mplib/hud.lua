@@ -927,7 +927,7 @@ function hudDrawPlayerWorldMarkers(players, lineOfSightRequired, maxRange, color
 	local markers = {}
 	for i=1,#players do
 		local p = players[i]
-		if not IsPlayerLocal(p) and GetPlayerHealth(p) > 0 and not IsPlayerDisabled(p) and IsPlayerValid(p) then
+		if not IsPlayerLocal(p) and GetPlayerHealth(p) > 0 and not IsPlayerDisabled(p) and IsPlayerValid(p) and CDMP.ShowPlayerMarkers(p) then
 			local playerUp = GetPlayerUp(p)
 			markers[1 + #markers] = { 
 				pos=VecAdd(GetPlayerTransform(p).pos, playerUp),

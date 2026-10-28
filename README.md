@@ -32,6 +32,8 @@ Built on the official Multiplayer Classics scripts, with host-selected match set
 | Headshot damage | Choose a preset multiplier from 1.0× to 3.0× |
 | Combat feedback | Optional hit markers, kill markers and floating damage numbers |
 | Player names | Toggle names while keeping CTF flags and objective markers visible |
+| Map on Tab | Disable only the built-in map; other mods can still use Tab |
+| Teammate markers | Independently hide allied names, arrows, health bars and map dots in TDM/CTF |
 | Five shared presets | Save, load, rename and clear slots across all three modes and maps |
 | Workshop tools | Configure active mod tools registered in `game.tool` |
 | Setup menu | Tool/preset cards, integer sliders, pages and mouse/keyboard/gamepad navigation |
@@ -81,7 +83,7 @@ All player-facing configuration is available in the host's setup menu; editing L
 | Loot weight | Integer slider, 0–10; **0 excludes the tool** |
 | Pickup ammo | Integer slider, 0–100 |
 | Headshot multiplier | 1.0, 1.15, 1.25, 1.3, 1.5, 2.0, 2.5 or 3.0 |
-| HUD | Player names, hit markers, kill markers and damage numbers |
+| HUD | Map (Tab), player names, teammate markers in team modes, hit markers, kill markers and damage numbers |
 
 ### Defaults
 
@@ -160,7 +162,11 @@ A zero weight excludes a tool. An empty pool produces no crates. An empty starti
 
 ### HUD and combat
 
-The headshot multiplier and optional feedback are shared match settings. Hiding player names keeps CTF objectives and flag markers visible. Input hints read current keyboard bindings and retain gamepad glyphs.
+The headshot multiplier and optional feedback are shared match settings. In **HUD**, **Map (Tab)** controls only the built-in map in all three modes. It uses the vanilla map-disable flag without consuming Tab, changing bindings or clearing input, so other mods can still react to that key.
+
+In TDM and CTF, **Teammate markers** independently hides allied names, direction indicators, health bars and map dots. Enemy markers still follow the separate **Player names** setting. CTF flags and bases remain visible; an allied flag carrier keeps only the flag objective, without the teammate's name or health bar.
+
+Both new switches default to on, including when loading older presets that lack the fields, and are saved with the other HUD options. Input hints read current keyboard bindings and retain gamepad glyphs.
 
 ## Example Setup
 

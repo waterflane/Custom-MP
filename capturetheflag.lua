@@ -623,6 +623,7 @@ function client.tickTool(player, dt)
 end
 
 function client.tick(dt)
+	CDMP.ApplyMapVisibility()
 	hudTick(dt)
 	for p in Players() do
 		local toolId = GetPlayerTool(p)
@@ -666,11 +667,7 @@ local function drawMode(dt)
 	}
 
 	for p in Players() do
-		if teamsGetTeamId(p) == myTeamId and not IsPlayerLocal(p) and GetPlayerHealth(p) > 0 then
-			local characterId = GetPlayerCharacter(p)
-			local imagePath = GetString("characters."..characterId..".preview")
-			AddMapMarker(p, "member", GetPlayerName(p), "loc@UI_TEXT_TEAM", true, "loc@UI_TEXT_TEAM_MEMBER", GetPlayerTransform(p).pos, teamsGetColor(myTeamId), imagePath, "hud/party-member_map-marker.png")
-		end
+		CDMP.AddTeammateMapMarker(p, "member")
 	end
 
 	for i = 1, #shared.flags do
@@ -715,6 +712,7 @@ local function drawMode(dt)
 		if not IsPlayerLocal(p) and GetPlayerHealth(p) > 0 then
 			local color = teamsGetColor(teamsGetTeamId(p))
 			local isTeamMate = teamsGetTeamId(p) == myTeamId
+			local showPlayer = CDMP.ShowPlayerMarkers(p)
 			local iconColor = nil
 			local icon = nil
 			local drawIconInView = true
@@ -730,18 +728,22 @@ local function drawMode(dt)
 				drawIconInView = false
 			end
 
-			markers[1 + #markers] = {
-				pos=VecAdd(GetPlayerTransform(p).pos, Vec(0, 1.0, 0)),
-				offset = Vec(0, 1.2, 0),
-				color=color,
-				lineOfSightRequired = not isTeamMate,
-				maxRange = isTeamMate and 9999.0 or 40.0,
-				label=CDMP.ShowNames() and GetPlayerName(p) or nil,
-				player=p,
-				icon=icon,
-				iconColor=iconColor,
-				drawIconInView = drawIconInView
-			}
+			-- Hidden allies expose only a carried flag objective, never their
+			-- name, directional teammate icon or player health bar.
+			if showPlayer or icon == "MOD/gfx/flag.png" then
+				markers[1 + #markers] = {
+					pos=VecAdd(GetPlayerTransform(p).pos, Vec(0, 1.0, 0)),
+					offset = Vec(0, 1.2, 0),
+					color=color,
+					lineOfSightRequired = not isTeamMate,
+					maxRange = isTeamMate and 9999.0 or 40.0,
+					label=showPlayer and CDMP.ShowNames() and GetPlayerName(p) or nil,
+					player=showPlayer and p or nil,
+					icon=icon,
+					iconColor=iconColor,
+					drawIconInView = drawIconInView
+				}
+			end
 		end
 	end
 
@@ -826,6 +828,7 @@ local function drawMode(dt)
 end
 
 function client.draw(dt)
+	CDMP.ApplyMapVisibility()
 	drawMode(dt)
 	CDMP_DrawNotices()
 end

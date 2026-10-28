@@ -74,7 +74,8 @@ function CDMP.LoadPreset(slot)
 	local settings = {duration = GetFloat(prefix .. ".duration"), headshot = GetFloat(prefix .. ".headshot"), hud = {}, tools = {}}
 	settings.timeMode = GetString(prefix .. ".timemode") == "custom" and "custom" or "preset"
 	settings.customDuration = HasKey(prefix .. ".customduration") and GetFloat(prefix .. ".customduration") or settings.duration
-	for _, name in ipairs({"nameplates", "hitMarker", "killMarker", "damageNumbers"}) do
+	for _, field in ipairs(CDMP.HUD_OPTIONS) do
+		local name = field.key
 		if HasKey(prefix .. ".hud." .. string.lower(name)) then settings.hud[name] = GetBool(prefix .. ".hud." .. string.lower(name)) end
 	end
 	for _, storageId in ipairs(ListKeys(prefix .. ".tools")) do

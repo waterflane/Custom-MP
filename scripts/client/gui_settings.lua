@@ -44,10 +44,12 @@ local function matchItems(settings, seed)
 	return items
 end
 
-local function hudItems(settings)
+local function hudItems(settings, seed)
 	local items = {}
-	for _, pair in ipairs({{"nameplates", "NAMES"}, {"hitMarker", "HIT_MARKER"}, {"killMarker", "KILL_MARKER"}, {"damageNumbers", "DAMAGE_NUMBERS"}}) do
-		items[#items + 1] = item("hud." .. pair[1], pair[2], toggleOptions(), settings.hud[pair[1]] and 1 or 0)
+	for _, field in ipairs(CDMP.HUD_OPTIONS) do
+		if seed or not field.teamOnly or shared.cdmp.mode ~= "dm" then
+			items[#items + 1] = item("hud." .. field.key, field.label, toggleOptions(), settings.hud[field.key] and 1 or 0)
+		end
 	end
 	return items
 end
@@ -75,7 +77,7 @@ end
 
 function CDMP_SetDraft(settings)
 	client.cdmpDraft = CDMP.Copy(settings)
-	seedItems(matchItems(settings, true)); seedItems(hudItems(settings))
+	seedItems(matchItems(settings, true)); seedItems(hudItems(settings, true))
 	for _, tool in ipairs(shared.cdmp.tools) do seedItems(toolItems(tool, settings)) end
 end
 

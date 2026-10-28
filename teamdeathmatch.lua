@@ -131,6 +131,7 @@ end
 ----- CLIENT -----
 
 function client.tick(dt)
+	CDMP.ApplyMapVisibility()
 	hudTick(dt)
 	SetLowHealthBlurThreshold(0.25)
 	spectateTick(teamsGetLocalTeam())
@@ -166,11 +167,7 @@ local function drawMode(dt)
 	end
 
 	for p in Players() do
-		if teamsGetTeamId(p) == myTeamId and not IsPlayerLocal(p) and GetPlayerHealth(p) > 0 then
-			local characterId = GetPlayerCharacter(p)
-			local imagePath = GetString("characters."..characterId..".preview")
-			AddMapMarker(p, "player", GetPlayerName(p), "loc@UI_TEXT_TEAM", true, "loc@UI_TEXT_TEAM_MEMBER", GetPlayerTransform(p).pos, teamsGetColor(myTeamId), imagePath, "hud/party-member_map-marker.png")
-		end
+		CDMP.AddTeammateMapMarker(p, "player")
 	end
 
 	CDMP.DrawMatchTimer(1.0 - clamp(countdownGetTime()/0.2, 0.0, 1.0))
@@ -240,6 +237,7 @@ end
 
 
 function client.draw(dt)
+	CDMP.ApplyMapVisibility()
 	drawMode(dt)
 	CDMP_DrawNotices()
 end

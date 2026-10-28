@@ -12,6 +12,16 @@ CDMP.MAX_CUSTOM_DURATION = 6 * 60 * 60
 CDMP.DURATION_OPTIONS = {180, 300, 480, 600, 900, 1200, 1800}
 CDMP.HEADSHOT_OPTIONS = {1.0, 1.15, 1.25, 1.3, 1.5, 2.0, 2.5, 3.0}
 
+-- Shared field list keeps setup controls and older preset loading consistent.
+CDMP.HUD_OPTIONS = {
+	{key = "map", label = "MAP"},
+	{key = "nameplates", label = "NAMES"},
+	{key = "teammateMarkers", label = "TEAMMATE_MARKERS", teamOnly = true},
+	{key = "hitMarker", label = "HIT_MARKER"},
+	{key = "killMarker", label = "KILL_MARKER"},
+	{key = "damageNumbers", label = "DAMAGE_NUMBERS"},
+}
+
 CDMP.DEFAULT_UNLISTED_TOOL_AMMO = 10
 CDMP.DEFAULT_UNLISTED_TOOL_PICKUP_AMOUNT = 10
 CDMP.DEFAULT_UNLISTED_TOOL_CAN_LOOT = true
@@ -67,7 +77,7 @@ function CDMP.DefaultSettings(mode, tools)
 		duration = mode == "ctf" and 480 or 300,
 		timeMode = "preset", customDuration = mode == "ctf" and 480 or 300,
 		headshot = 1.0,
-		hud = {nameplates = true, hitMarker = false, killMarker = false, damageNumbers = false},
+		hud = {map = true, teammateMarkers = true, nameplates = true, hitMarker = false, killMarker = false, damageNumbers = false},
 		tools = {},
 	}
 	for _, tool in ipairs(tools) do

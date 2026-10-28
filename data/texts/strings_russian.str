@@ -71,3 +71,6 @@ CDMP_OVERWRITE                                "Перезаписать"
 
 CDMP_TOOL_START                               "Старт"
 CDMP_TOOL_LOOT                                "Лут"
+
+CDMP_MAP                                      "Карта (Tab)"
+CDMP_TEAMMATE_MARKERS                         "Метки союзников"
