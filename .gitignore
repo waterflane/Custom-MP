@@ -1,5 +1,6 @@
 # Teardown / Steam Workshop local state
 id.txt
+ids.txt
 publishedfileid.txt
 *.workshop
 steam_description.txt
